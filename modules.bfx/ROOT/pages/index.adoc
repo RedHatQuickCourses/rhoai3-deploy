@@ -1,8 +1,0 @@
-= Making RHOAI Model Inference Work for You
-:navtitle: Home
-:toc: macro
-
-// This page includes the chapter1 content to serve as the homepage
-// The ROOT module is used for the component index page
-
-include::chapter1:intro.adoc[]
