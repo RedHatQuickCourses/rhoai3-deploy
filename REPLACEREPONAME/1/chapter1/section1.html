@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Architecture: Intelligent Routing for Model Deployment :: FIXME Course Title</title>
+    <title>Architecture: Intelligent Routing for Model Deployment :: Intelligent Model Deployment with llm-d</title>
     <link rel="prev" href="../index.html">
     <link rel="next" href="section2.html">
     <meta name="generator" content="Antora 3.1.3">
@@ -15,7 +15,7 @@
   <nav class="navbar">
     <div class="navbar-brand">
       <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
-      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">FIXME Course Title</a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Intelligent Model Deployment with llm-d</a>
       <button class="navbar-burger" data-target="topbar-nav">
         <span></span>
         <span></span>
@@ -137,7 +137,6 @@
 <main class="article">
 <div class="toolbar" role="navigation">
 <button class="nav-toggle"></button>
-  <a href="../index.html" class="home-link"></a>
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">FIXME Course Title</a></li>
@@ -271,9 +270,9 @@
 </div>
 </div>
 <div class="sect2">
-<h3 id="_4_the_model_registry_connection"><a class="anchor" href="#_4_the_model_registry_connection"></a>4. The Model Registry Connection</h3>
+<h3 id="_4_model_source_flexibility"><a class="anchor" href="#_4_model_source_flexibility"></a>4. Model Source Flexibility</h3>
 <div class="paragraph">
-<p>When you deploy from your private registry, <code>llm-d</code> reads the model URI from the registry metadata and pulls the weights from your secure storage (S3/MinIO). The intelligent routing and cache management apply <strong>regardless of the model source</strong>.</p>
+<p><code>llm-d</code> works with models from any source—your private registry, the public catalog, or Hugging Face. The intelligent routing and cache management apply <strong>regardless of the model source</strong>. Simply provide the model URI in the standard format (e.g., <code>hf://Qwen/Qwen3-0.6B</code> or <code>s3://your-bucket/model-path</code>).</p>
 </div>
 </div>
 </div>

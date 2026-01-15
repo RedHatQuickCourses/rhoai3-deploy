@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Troubleshooting &amp; Day 2 Operations :: FIXME Course Title</title>
+    <title>Troubleshooting &amp; Day 2 Operations :: Intelligent Model Deployment with llm-d</title>
     <link rel="prev" href="section2.html">
     <link rel="next" href="../LABENV/index.html">
     <meta name="generator" content="Antora 3.1.3">
@@ -15,7 +15,7 @@
   <nav class="navbar">
     <div class="navbar-brand">
       <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
-      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">FIXME Course Title</a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Intelligent Model Deployment with llm-d</a>
       <button class="navbar-burger" data-target="topbar-nav">
         <span></span>
         <span></span>
@@ -137,7 +137,6 @@
 <main class="article">
 <div class="toolbar" role="navigation">
 <button class="nav-toggle"></button>
-  <a href="../index.html" class="home-link"></a>
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">FIXME Course Title</a></li>
@@ -336,15 +335,15 @@ oc exec -n openshift-monitoring -c prometheus prometheus-k8s-0 -- \
 </div>
 </div>
 <div class="sect1">
-<h2 id="_4_debugging_model_loading_registry_connection"><a class="anchor" href="#_4_debugging_model_loading_registry_connection"></a>4. Debugging Model Loading (Registry Connection)</h2>
+<h2 id="_4_debugging_model_loading"><a class="anchor" href="#_4_debugging_model_loading"></a>4. Debugging Model Loading</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>If your model is registered in the private registry but fails to load, verify the connection.</p>
+<p>If your model fails to load, verify the model URI and storage access.</p>
 </div>
 <div class="sect2">
 <h3 id="_check_1_verify_model_uri"><a class="anchor" href="#_check_1_verify_model_uri"></a>Check 1: Verify Model URI</h3>
 <div class="paragraph">
-<p>The <code>model.uri</code> in your <code>LLMInferenceService</code> must match the URI format expected by your registry:</p>
+<p>The <code>model.uri</code> in your <code>LLMInferenceService</code> must use the correct format:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -353,8 +352,9 @@ oc exec -n openshift-monitoring -c prometheus prometheus-k8s-0 -- \
 </div>
 <div class="paragraph">
 <p>+
-* <strong>For Hugging Face:</strong> Should be <code>hf://&lt;model-name&gt;</code>.
-* <strong>For Private Registry:</strong> Should be <code>s3://&lt;bucket&gt;/&lt;path&gt;</code> or <code>oci://&lt;registry&gt;/&lt;image&gt;</code>.</p>
+* <strong>For Hugging Face:</strong> Should be <code>hf://&lt;model-name&gt;</code> (e.g., <code>hf://Qwen/Qwen3-0.6B</code>).
+* <strong>For Private S3:</strong> Should be <code>s3://&lt;bucket&gt;/&lt;path&gt;</code>.
+* <strong>For OCI Registry:</strong> Should be <code>oci://&lt;registry&gt;/&lt;image&gt;</code>.</p>
 </div>
 </div>
 <div class="sect2">
@@ -374,18 +374,15 @@ oc rsh -n &lt;your-namespace&gt; &lt;vllm-worker-pod-name&gt; curl -v &lt;your-s
 </div>
 </div>
 <div class="sect2">
-<h3 id="_check_3_check_model_registry_connection"><a class="anchor" href="#_check_3_check_model_registry_connection"></a>Check 3: Check Model Registry Connection</h3>
+<h3 id="_check_3_verify_model_availability"><a class="anchor" href="#_check_3_verify_model_availability"></a>Check 3: Verify Model Availability</h3>
 <div class="paragraph">
-<p>If your model is in the private registry, verify the registry is accessible:</p>
+<p>For Hugging Face models, verify the model name is correct. For private storage, verify the path exists and is accessible:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get modelregistries -n rhoai-model-registries</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Test Hugging Face model access (from a pod with internet access)
+curl -I https://huggingface.co/Qwen/Qwen3-0.6B</code></pre>
 </div>
-</div>
-<div class="paragraph">
-<p>+
-* <strong>Expected:</strong> Your registry should be in <code>Ready</code> status.</p>
 </div>
 </div>
 </div>
