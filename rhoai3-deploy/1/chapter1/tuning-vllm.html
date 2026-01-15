@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Tuning the Engine: Arguments :: Intelligent Model Deployment with llm-d</title>
+    <link rel="prev" href="vllm-engine.html">
+    <link rel="next" href="model-serving.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Intelligent Model Deployment with llm-d</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/REPLACEREPONAME/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="rhoai3-deploy" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Intelligent Model Deployment with llm-d</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section1.adoc">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section2.adoc">The Deployment Lab</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section3.adoc">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="intro.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="gpu-arch.html">GPU Architecture</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="vram-calc.html">The Sizing Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="vllm-engine.html">vLLM</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="tuning-vllm.html">vLLM Tuning</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="model-serving.html">Deploy a Model</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="summary.html">Testing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Intelligent Model Deployment with llm-d</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Intelligent Model Deployment with llm-d</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Intelligent Model Deployment with llm-d</a></li>
+    <li><a href="tuning-vllm.html">vLLM Tuning</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Tuning the Engine: Arguments</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p><strong>Default settings are for tourists. Engineers tune their engines.</strong></p>
+</div>
+<div class="paragraph">
+<p>In Module 2, we calculated that a Granite-8B model needs ~19GB of weights and ~20GB of KV Cache (at full 128k context).
+If you deploy this on an NVIDIA A10G (24GB) using default settings, <strong>it will crash</strong>.</p>
+</div>
+<div class="paragraph">
+<p>Why? Because vLLM defaults to utilizing 90% of the GPU and attempts to reserve space for the model&#8217;s <strong>maximum possible context</strong>.</p>
+</div>
+<div class="paragraph">
+<p>To make it fit, you must apply the <strong>Safety Valve</strong>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_1_the_safety_valve_max_model_len"><a class="anchor" href="#_1_the_safety_valve_max_model_len"></a>1. The Safety Valve: <code>--max-model-len</code></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This is the most important argument for cost-effective serving. It hard-limits the context window.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>The Default:</strong> The model&#8217;s config (e.g., 128,000 tokens).</p>
+</li>
+<li>
+<p><strong>The Fix:</strong> Force it down to what your hardware can handle.</p>
+</li>
+<li>
+<p><strong>Guidance:</strong></p>
+</li>
+<li>
+<p><strong>A10G (24GB):</strong> Set to <code>8192</code> or <code>4096</code>.</p>
+</li>
+<li>
+<p><strong>H100 (80GB):</strong> Can typically handle <code>32768</code> or higher.</p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">args:
+  - "--max-model-len=8192"  # Caps context to save VRAM</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_2_the_gas_pedal_gpu_memory_utilization"><a class="anchor" href="#_2_the_gas_pedal_gpu_memory_utilization"></a>2. The Gas Pedal: <code>--gpu-memory-utilization</code></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This controls how much VRAM vLLM is allowed to consume.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Default:</strong> <code>0.9</code> (90%).</p>
+</li>
+<li>
+<p><strong>The Tuning:</strong> On a dedicated Kubernetes node (where no other GPU processes run), you can safely bump this to <code>0.95</code>.</p>
+</li>
+<li>
+<p><strong>The Impact:</strong> That extra 5% (~1.2GB on an A10G) creates room for dozens of additional concurrent user requests in the KV Cache.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_3_the_scaling_factor_tensor_parallel_size"><a class="anchor" href="#_3_the_scaling_factor_tensor_parallel_size"></a>3. The Scaling Factor: <code>--tensor-parallel-size</code></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>When the <strong>Static Weights</strong> (from Module 2) exceed the VRAM of a single card, you must shard the model.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Rule:</strong> The value must match the number of GPUs requested in your Kubernetes pod.</p>
+</li>
+<li>
+<p><strong>Example:</strong> Deploying Llama-3-70B (~140GB) on 80GB A100s.</p>
+</li>
+<li>
+<p>1 GPU (80GB) &lt; 140GB &#8594; <strong>Crash.</strong></p>
+</li>
+<li>
+<p>2 GPUs (160GB) &gt; 140GB &#8594; <strong>Success.</strong></p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">resources:
+  limits:
+    nvidia.com/gpu: 2  # Request 2 Physical Cards
+args:
+  - "--tensor-parallel-size=2" # Tell vLLM to use both</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_4_agentic_enabler_tool_calling"><a class="anchor" href="#_4_agentic_enabler_tool_calling"></a>4. Agentic Enabler: Tool Calling</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To use Granite as an "Agent" (a model that can use tools/functions), you must explicitly enable the parser.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">args:
+  - "--enable-auto-tool-choice"
+  - "--tool-call-parser=granite" # Specific to the Granite family</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_putting_it_together_the_servingruntime"><a class="anchor" href="#_putting_it_together_the_servingruntime"></a>Putting it Together: The ServingRuntime</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In OpenShift AI, we package these arguments into a <strong>ServingRuntime</strong> template.
+This allows you to define the "Tuned Engine" once and let Data Scientists reuse it.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-tuned-granite
+spec:
+  containers:
+    - args:
+        - --port=8080
+        - --model=/mnt/models
+        - --served-model-name={{.Name}}
+        - --max-model-len=8192         # &lt;--- The Tuning
+        - --gpu-memory-utilization=0.95 # &lt;--- The Optimization
+      image: quay.io/modh/vllm:rhoai-3.0
+      resources:
+        requests:
+          nvidia.com/gpu: 1</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><a href="#automated-deployment.adoc" class="xref unresolved">Next: Automating Deployment</a></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="vllm-engine.html">vLLM</a></span>
+  <span class="next"><a href="model-serving.html">Deploy a Model</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

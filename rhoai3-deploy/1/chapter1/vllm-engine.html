@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>The Engine: vLLM &amp; PagedAttention :: Intelligent Model Deployment with llm-d</title>
+    <link rel="prev" href="vram-calc.html">
+    <link rel="next" href="tuning-vllm.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Intelligent Model Deployment with llm-d</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/REPLACEREPONAME/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="rhoai3-deploy" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Intelligent Model Deployment with llm-d</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section1.adoc">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section2.adoc">The Deployment Lab</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section3.adoc">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="intro.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="gpu-arch.html">GPU Architecture</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="vram-calc.html">The Sizing Guide</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="vllm-engine.html">vLLM</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="tuning-vllm.html">vLLM Tuning</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="model-serving.html">Deploy a Model</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="summary.html">Testing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Intelligent Model Deployment with llm-d</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Intelligent Model Deployment with llm-d</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Intelligent Model Deployment with llm-d</a></li>
+    <li><a href="vllm-engine.html">vLLM</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">The Engine: vLLM &amp; PagedAttention</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p><strong>Inference is a memory management problem disguised as a compute problem.</strong></p>
+</div>
+<div class="paragraph">
+<p>You have selected your model. You have sized your hardware. Now you need software to bridge the gap.
+In the early days of LLMs, we used naive loaders that allocated contiguous blocks of memory for every user request.
+This resulted in massive fragmentation. A 24GB GPU would report "Out of Memory" while actually having 10GB of fragmented, unusable free space.</p>
+</div>
+<div class="paragraph">
+<p>Enter <strong>vLLM</strong>, the standard inference engine for Red Hat OpenShift AI.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_core_innovation_pagedattention"><a class="anchor" href="#_the_core_innovation_pagedattention"></a>The Core Innovation: PagedAttention</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>vLLM changed the industry by treating GPU memory the way an Operating System treats RAM: via <strong>Paging</strong>.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>The Old Way:</strong> If a user <strong>might</strong> generate 2,000 tokens, the system reserved a continuous 2,000-token block of VRAM immediately. If they only generated 50 tokens, the rest was wasted.</p>
+</li>
+<li>
+<p><strong>The vLLM Way (PagedAttention):</strong> It breaks the Key-Value (KV) Cache into small, non-contiguous blocks ("pages"). It allocates these pages on-demand.</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="_the_engineering_impact"><a class="anchor" href="#_the_engineering_impact"></a>The Engineering Impact</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Zero Waste:</strong> vLLM can fill strictly available non-contiguous memory slots.</p>
+</li>
+<li>
+<p><strong>Higher Throughput:</strong> Because memory isn&#8217;t wasted on "reservation," you can fit 2x-4x more concurrent users (Batch Size) on the same hardware.</p>
+</li>
+<li>
+<p><strong>The Trade-off:</strong> vLLM is optimized for <strong>Throughput</strong> (serving many users) rather than pure <strong>Latency</strong> (serving one user instantly). For enterprise serving, throughput is usually the priority.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_interface_openai_compatibility"><a class="anchor" href="#_the_interface_openai_compatibility"></a>The Interface: OpenAI Compatibility</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>vLLM provides a drop-in replacement for the OpenAI API.
+This is a strategic advantage for Platform Engineers:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>No Vendor Lock-in:</strong> Your developers can write code using the standard <code>openai</code> Python library.</p>
+</li>
+<li>
+<p><strong>Migration Path:</strong> You can prototype on public APIs (GPT-4) and switch to your private Granite deployment simply by changing the <code>base_url</code> environment variable.</p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-python hljs" data-lang="python"># The code doesn't change. Only the endpoint does.
+client = OpenAI(
+    base_url="http://granite-service.rhoai.svc:8080/v1",
+    api_key="empty" # vLLM doesn't require keys by default
+)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><a href="#vllm-tuning.adoc" class="xref unresolved">Next: Tuning the Configuration</a></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="vram-calc.html">The Sizing Guide</a></span>
+  <span class="next"><a href="tuning-vllm.html">vLLM Tuning</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

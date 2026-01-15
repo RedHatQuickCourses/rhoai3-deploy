@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Lab: Automated Deployment (GitOps) :: Intelligent Model Deployment with llm-d</title>
+    <link rel="prev" href="tuning-vllm.html">
+    <link rel="next" href="summary.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Intelligent Model Deployment with llm-d</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/REPLACEREPONAME/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="rhoai3-deploy" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Intelligent Model Deployment with llm-d</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section1.adoc">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section2.adoc">The Deployment Lab</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section3.adoc">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="intro.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="gpu-arch.html">GPU Architecture</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="vram-calc.html">The Sizing Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="vllm-engine.html">vLLM</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="tuning-vllm.html">vLLM Tuning</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="model-serving.html">Deploy a Model</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="summary.html">Testing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Intelligent Model Deployment with llm-d</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Intelligent Model Deployment with llm-d</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Intelligent Model Deployment with llm-d</a></li>
+    <li><a href="model-serving.html">Deploy a Model</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Lab: Automated Deployment (GitOps)</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p><strong>Click-Ops does not scale. GitOps does.</strong></p>
+</div>
+<div class="paragraph">
+<p>In the previous modules, we selected the <strong>Granite-2B</strong> model and calculated the tuning parameters (<code>max-model-len=8192</code>) required to make it run safely on our hardware.
+Now, we must deploy it.</p>
+</div>
+<div class="paragraph">
+<p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo.</p>
+</div>
+<div class="paragraph">
+<p>But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?</p>
+</div>
+<div class="paragraph">
+<p>In this lab, We will deploy our tuned inference stack using a parameterized <strong>Infrastructure-as-Code</strong> script.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_1_get_the_lab_materials"><a class="anchor" href="#_step_1_get_the_lab_materials"></a>Step 1: Get the Lab Materials</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To begin, we need to acquire the automation scripts. We have packaged the entire "Serving Factory" into a Git repository.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Open your OpenShift Terminal.</strong></p>
+</li>
+<li>
+<p><strong>Clone the repository:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">git clone https://github.com/RedHatQuickCourses/rhoai3-deploy.git</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p><strong>Switch to the lab directory:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd rhoai3-deploy</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="title">Are you catching up?</div>
+<div class="paragraph">
+<p>If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
+Before proceeding, you must ensure the model is downloaded and the storage is configured.</p>
+</div>
+<div class="paragraph">
+<p><strong><a href="fast-track.html" class="xref page">Click here to run the Fast Track Setup Script</a></strong> to get your environment ready in 2 minutes.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_2_the_architecture"><a class="anchor" href="#_step_2_the_architecture"></a>Step 2: The Architecture</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Our script (<code>deploy/serve_model.sh</code>) automates the creation of two critical Kubernetes Custom Resources (CRs):</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>The ServingRuntime (The Engine):</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p>Defines the <strong>What</strong> (vLLM image, port 8080).</p>
+</li>
+<li>
+<p>Defines the <strong>How</strong> (Tuning arguments like <code>max-model-len</code> and <code>gpu-memory-utilization</code>).</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>The InferenceService (The Workload):</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p>Binds the Engine to the Data Connection (S3).</p>
+</li>
+<li>
+<p>Requests the specific hardware (1 NVIDIA GPU).</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_3_inspect_the_automation"><a class="anchor" href="#_step_3_inspect_the_automation"></a>Step 3: Inspect the Automation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>It is designed to be idempotent—you can run it ten times, and it will simply ensure the state matches your intent.</p>
+</div>
+<div class="listingblock">
+<div class="title">Key Configuration Block (deploy/serve_model.sh)</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">MODEL_NAME="granite-2b-server"
+MODEL_PATH="ibm-granite/granite-3.3-2b-instruct"
+CONTEXT_LIMIT="8192"  # &lt;--- Applying our sizing math from Module 2</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_4_execute_the_deployment"><a class="anchor" href="#_step_4_execute_the_deployment"></a>Step 4: Execute the Deployment</h2>
+<div class="sectionbody">
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Run the deployment script:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">chmod +x deploy/serve_model.sh
+./deploy/serve_model.sh</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p><strong>Watch the Output:</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p>You will see it create the <code>ServingRuntime</code>.</p>
+</li>
+<li>
+<p>You will see it create the <code>InferenceService</code>.</p>
+</li>
+<li>
+<p>It will then enter a wait loop, checking the Kubernetes status until the model is fully loaded into GPU memory.</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p><strong>Expected Result:</strong>
+<code>✅ SUCCESS: Model is Serving!</code></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_5_validate_the_tuning"><a class="anchor" href="#_step_5_validate_the_tuning"></a>Step 5: Validate the Tuning</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Let&#8217;s prove that our tuning parameters actually applied.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Check the Pod Arguments:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pod -l serving.kserve.io/inferenceservice=granite-2b-server \
+  -n rhoai-model-registry-lab \
+  -o jsonpath='{.items[0].spec.containers[0].args}'</code></pre>
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Verify:</strong> Look for <code>"--max-model-len=8192"</code>. If this is present, your "Safety Valve" is active.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>Test the API:</strong>
+The script outputs a <code>curl</code> command. Run it to confirm the model is reasoning.</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Get the URL dynamically
+export URL=$(oc get inferenceservice granite-2b-server -n rhoai-model-registry-lab -o jsonpath='{.status.url}')
+
+# Send a prompt
+curl -k $URL/v1/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "granite-2b-server",
+    "prompt": "Define 'GitOps' in one sentence.",
+    "max_tokens": 60
+  }'</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p><a href="#course-summary.adoc" class="xref unresolved">Next: Course Summary</a></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="tuning-vllm.html">vLLM Tuning</a></span>
+  <span class="next"><a href="summary.html">Testing</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

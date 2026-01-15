@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Course Summary: The Engineering Reality :: Intelligent Model Deployment with llm-d</title>
+    <link rel="prev" href="model-serving.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Intelligent Model Deployment with llm-d</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/REPLACEREPONAME/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="rhoai3-deploy" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Intelligent Model Deployment with llm-d</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section1.adoc">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section2.adoc">The Deployment Lab</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="#chapter1:section3.adoc">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="intro.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="gpu-arch.html">GPU Architecture</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="vram-calc.html">The Sizing Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="vllm-engine.html">vLLM</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="tuning-vllm.html">vLLM Tuning</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="model-serving.html">Deploy a Model</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="summary.html">Testing</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Intelligent Model Deployment with llm-d</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Intelligent Model Deployment with llm-d</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Intelligent Model Deployment with llm-d</a></li>
+    <li><a href="summary.html">Testing</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Course Summary: The Engineering Reality</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p><strong>You have graduated from "Shadow AI."</strong></p>
+</div>
+<div class="paragraph">
+<p>At the start of this course, we identified the core problem:
+<strong>Downloading models to a laptop is easy. Serving them at scale, on budget, and without crashing production is hard.</strong></p>
+</div>
+<div class="paragraph">
+<p>You have now built a governed <strong>AI Serving Factory</strong>. Let&#8217;s review the engineering decisions you made to get here.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_journey_recap"><a class="anchor" href="#_the_journey_recap"></a>The Journey Recap</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Phase</th>
+<th class="tableblock halign-left valign-top">The Engineering Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>1. Strategy</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Instead of grabbing random models, you selected <strong>Granite-3.3-2B</strong> from the <strong>Red Hat AI Validated Repository</strong>.
+<strong>Result:</strong> You gained legal certainty (Apache 2.0) and performance predictability.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>2. Architecture</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Instead of guessing, you matched the hardware to the workload.
+<strong>Result:</strong> You avoided deploying an FP16 model on incompatible hardware or over-provisioning an H100 for a tiny task.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>3. Sizing</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">You performed the VRAM math: <code>(Weights * 1.2) + KV Cache</code>.
+<strong>Result:</strong> You identified that the default 128k context window would crash your A10G GPU.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>4. Tuning</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">You configured <strong>vLLM</strong> with <code>--max-model-len=8192</code>.
+<strong>Result:</strong> You created a "Safety Valve" that prevents OOM errors under high load.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>5. Operations</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">You abandoned the UI for a GitOps script (<code>serve_model.sh</code>) from the <code>rhoai3-deploy</code> repository.
+<strong>Result:</strong> Your deployment is now reproducible, version-controlled, and ready for automation.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps_day_2_operations"><a class="anchor" href="#_next_steps_day_2_operations"></a>Next Steps: Day 2 Operations</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Serving the model is just Day 1. To run a true production platform, your next steps are:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>1. Observability:</strong>
+Configure <strong>Prometheus</strong> to scrape the vLLM metrics port (<code>8080</code>).</p>
+</li>
+<li>
+<p><strong>Key Metric:</strong> <code>vllm:num_requests_running</code> (Concurrency) and <code>vllm:gpu_cache_usage_perc</code> (Are we running out of KV Cache?).</p>
+</li>
+<li>
+<p><strong>2. Autoscaling:</strong>
+Configure <strong>KNative</strong> to scale your pods based on concurrency.</p>
+</li>
+<li>
+<p><strong>Trigger:</strong> If <code>concurrency &gt; 10</code>, spin up a second GPU pod.</p>
+</li>
+<li>
+<p><strong>3. Quantization:</strong>
+Explore the <strong>Quantization Labs</strong> (coming soon) to shrink your Granite-2B model to <strong>INT8</strong>.</p>
+</li>
+<li>
+<p><strong>Goal:</strong> Double your throughput on the same hardware.</p>
+</li>
+</ul>
+</div>
+<hr>
+<div class="paragraph">
+<p><strong>Congratulations. You are now ready to serve AI responsibly.</strong></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="model-serving.html">Deploy a Model</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Deploying Models with Intelligent Routing :: Intelligent Model Deployment with llm-d</title>
-    <link rel="next" href="chapter1/section1.html">
+    <link rel="next" href="#chapter1:section1.adoc">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../_/css/site.css">
     <script>var uiRootPath = '../../_'</script>
@@ -42,38 +42,38 @@
     <a class="nav-link" href="index.html">Introduction &amp; Value</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section1.html">Architecture Deep Dive</a>
+    <a class="nav-link" href="#chapter1:section1.adoc">Architecture Deep Dive</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section2.html">The Deployment Lab</a>
+    <a class="nav-link" href="#chapter1:section2.adoc">The Deployment Lab</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section3.html">Troubleshooting</a>
+    <a class="nav-link" href="#chapter1:section3.adoc">Troubleshooting</a>
   </li>
 </ul>
   </li>
   <li class="nav-item" data-depth="0">
 <ul class="nav-list">
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/index.html">Introduction &amp; Value</a>
+    <a class="nav-link" href="chapter1/intro.html">Introduction &amp; Value</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section1.html">GPU Architecture</a>
+    <a class="nav-link" href="chapter1/gpu-arch.html">GPU Architecture</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section2.html">The Sizing Guide</a>
+    <a class="nav-link" href="chapter1/vram-calc.html">The Sizing Guide</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section3.html">vLLM</a>
+    <a class="nav-link" href="chapter1/vllm-engine.html">vLLM</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section4.html">vLLM Tuning</a>
+    <a class="nav-link" href="chapter1/tuning-vllm.html">vLLM Tuning</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section5.html">Deploy a Model</a>
+    <a class="nav-link" href="chapter1/model-serving.html">Deploy a Model</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section6.html">Testing</a>
+    <a class="nav-link" href="chapter1/summary.html">Testing</a>
   </li>
 </ul>
   </li>
@@ -116,157 +116,11 @@
 </aside>
 <article class="doc">
 <h1 class="page">Deploying Models with Intelligent Routing</h1>
-<h1 id="_enterprise_model_serving_the_engineering_reality" class="sect0"><a class="anchor" href="#_enterprise_model_serving_the_engineering_reality"></a>Enterprise Model Serving: The Engineering Reality</h1>
-<div class="paragraph lead">
-<p><strong>Inference is where the bill arrives.</strong></p>
-</div>
 <div class="paragraph">
-<p>In the experimentation phase, the only metric that matters is "intelligence"—how smart is the model?
-But in the production phase, the metrics change. Suddenly, you are judged on <strong>Latency</strong>, <strong>Throughput</strong>, and <strong>Cost Per Token</strong>.</p>
-</div>
-<div class="paragraph">
-<p>A developer might download a 70-billion parameter model to a laptop and be impressed by its reasoning.
-A Platform Engineer looks at that same model and sees a massive infrastructure bill, potential <code>OutofMemory</code> errors, and a latency bottleneck that could kill the user experience.</p>
-</div>
-<div class="paragraph">
-<p>This course is your guide to the <strong>Engineering Reality</strong> of AI.
-We are moving beyond "Shadow AI"—where users blindly deploy heavy models—to a governed "AI Factory" where inference is fast, efficient, and cost-effective by design.</p>
-</div>
-<div class="sect1">
-<h2 id="_the_core_challenge_will_it_fit"><a class="anchor" href="#_the_core_challenge_will_it_fit"></a>The Core Challenge: "Will It Fit?"</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Deploying an LLM is not like deploying a microservice. You cannot just throw it into a container and hope for the best.
-You must answer three critical questions before you ever run a <code>kubectl apply</code>:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>The Selection:</strong> Is this model the right size for the task, or are we burning GPU cycles on overkill?</p>
-</li>
-<li>
-<p><strong>The Hardware:</strong> Do we have enough Video RAM (VRAM) to handle the model weights <strong>plus</strong> the concurrent user traffic (KV Cache)?</p>
-</li>
-<li>
-<p><strong>The Engine:</strong> Is our runtime (vLLM) tuned to maximize throughput, or are we leaving performance on the table?</p>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_the_serving_workflow"><a class="anchor" href="#_the_serving_workflow"></a>The Serving Workflow</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>In this course, we will break down the black box of model serving into a repeatable engineering process.</p>
-</div>
-<div class="sect2">
-<h3 id="_1_smart_model_selection"><a class="anchor" href="#_1_smart_model_selection"></a>1. Smart Model Selection</h3>
-<div class="paragraph">
-<p>You don&#8217;t have to benchmark 900,000 models from scratch.
-We will explore tools like the <strong>Red Hat AI Validated Model Repository</strong>, which acts as a shortcut. It provides pre-vetted models with known performance profiles, allowing you to skip the "guesswork" phase and select models that are guaranteed to work on your hardware.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_2_hardware_sizing_the_math"><a class="anchor" href="#_2_hardware_sizing_the_math"></a>2. Hardware Sizing (The Math)</h3>
-<div class="paragraph">
-<p>We will teach you the formula to calculate the true cost of a model.</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Weights vs. Cache:</strong> Understanding why a model that "fits" when idle crashes when under load.</p>
-</li>
-<li>
-<p><strong>Quantization:</strong> How to use formats like <code>FP8</code> or <code>INT8</code> to run massive models on smaller, cheaper GPUs without sacrificing intelligence.</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_3_the_engine_vllm_tuning"><a class="anchor" href="#_3_the_engine_vllm_tuning"></a>3. The Engine: vLLM Tuning</h3>
-<div class="paragraph">
-<p>We will look under the hood of <strong>vLLM</strong>, the standard inference engine for OpenShift AI.
-You will learn to tune critical parameters like:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><code>max-model-len</code>: Managing the context window to prevent memory overflows.</p>
-</li>
-<li>
-<p><code>gpu-memory-utilization</code>: Optimizing VRAM allocation for high-throughput batching.</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_4_automated_deployment_gitops"><a class="anchor" href="#_4_automated_deployment_gitops"></a>4. Automated Deployment (GitOps)</h3>
-<div class="paragraph">
-<p>Finally, we will abandon the "Click-Ops" dashboard.
-You will deploy a production-ready <strong>InferenceService</strong> using a parameterized script. This moves your infrastructure from "manual configuration" to "code," enabling reproducible and scalable deployments.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_our_laboratory_model_granite_3_3_2b"><a class="anchor" href="#_our_laboratory_model_granite_3_3_2b"></a>Our Laboratory Model: Granite-3.3-2B</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>To practice these concepts without requiring a massive GPU cluster, we will standardize on the <strong>IBM Granite-3.3-2B-Instruct</strong> model.</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Why this model?</strong></p>
-</li>
-<li>
-<p><strong>Efficiency:</strong> Its small size (2 Billion parameters) allows us to deploy it quickly and experiment with tuning parameters on standard hardware.</p>
-</li>
-<li>
-<p><strong>Modern Architecture:</strong> It uses the same underlying technology as massive 70B+ models, meaning the sizing and tuning lessons you learn here directly apply to enterprise-scale deployments.</p>
-</li>
-<li>
-<p><strong>Transparency:</strong> It is fully open-source (Apache 2.0) with disclosed training data, representing the gold standard for trusted enterprise AI.</p>
-</li>
-</ul>
-</div>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="title">Prerequisites</div>
-<div class="paragraph">
-<p>To successfully complete the hands-on sections of this course, you need:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>Access to a <strong>Red Hat OpenShift AI</strong> cluster.</p>
-</li>
-<li>
-<p>A basic understanding of Kubernetes (Pods, Services, Routes).</p>
-</li>
-<li>
-<p>The <code>oc</code> CLI tool installed in your terminal.</p>
-</li>
-</ul>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<hr>
-<div class="paragraph">
-<p><strong>The goal is efficient inference. Let&#8217;s start by calculating the cost.</strong></p>
-</div>
-</div>
+<p>Unresolved include directive in modules/ROOT/pages/index.adoc - include::chapter1:index.adoc[]</p>
 </div>
 <nav class="pagination">
-  <span class="next"><a href="chapter1/section1.html">Architecture Deep Dive</a></span>
+  <span class="next"><a href="#chapter1:section1.adoc">Architecture Deep Dive</a></span>
 </nav>
 </article>
   </div>
