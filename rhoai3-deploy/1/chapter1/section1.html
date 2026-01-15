@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Architecture: Intelligent Routing for Model Deployment :: Intelligent Model Deployment with llm-d</title>
+    <title>GPU Architecture: Matching Iron to Workload :: Intelligent Model Deployment with llm-d</title>
     <link rel="prev" href="../index.html">
     <link rel="next" href="section2.html">
     <meta name="generator" content="Antora 3.1.3">
@@ -59,13 +59,22 @@
     <a class="nav-link" href="index.html">Introduction &amp; Value</a>
   </li>
   <li class="nav-item is-current-page" data-depth="1">
-    <a class="nav-link" href="section1.html">Architecture Deep Dive</a>
+    <a class="nav-link" href="section1.html">GPU Architecture</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="section2.html">The Deployment Lab</a>
+    <a class="nav-link" href="section2.html">The Sizing Guide</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="section3.html">Troubleshooting</a>
+    <a class="nav-link" href="section3.html">vLLM</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section4.html">vLLM Tuning</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section5.html">Deploy a Model</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section6.html">Testing</a>
   </li>
 </ul>
   </li>
@@ -107,300 +116,159 @@
   <div class="toc-menu"></div>
 </aside>
 <article class="doc">
-<h1 class="page">Architecture: Intelligent Routing for Model Deployment</h1>
+<h1 class="page">GPU Architecture: Matching Iron to Workload</h1>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph lead">
-<p><strong>Understanding the difference between "deploying a model" and "deploying intelligently" is the key to production-grade AI.</strong></p>
+<p><strong>Don&#8217;t bring a Ferrari to a grocery run. Don&#8217;t bring a sedan to a Formula 1 race.</strong></p>
 </div>
 <div class="paragraph">
-<p>When you deploy a model from your registry, you have a choice: use standard serving (simple, but wasteful) or use <strong>Distributed Inference with <code>llm-d</code></strong> (intelligent, efficient, and production-ready).</p>
+<p>In traditional IT, you might standardize on one CPU type (e.g., "Generic x86"). In AI, standardizing on one GPU type is a fast track to bankruptcy or performance bottlenecks.
+Deploying a small 2B model on an H100 is financial waste. Deploying a 70B model on an A10G is a performance bottleneck.</p>
 </div>
 <div class="paragraph">
-<p>This section explains how <code>llm-d</code> transforms every model deployment—whether from your private registry or the public catalog—into an intelligent, cache-aware service that maximizes GPU ROI.</p>
+<p>To build a cost-effective factory, you must understand the "Three Generations" of hardware currently powering the enterprise.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_the_core_concept_intelligent_disaggregation"><a class="anchor" href="#_the_core_concept_intelligent_disaggregation"></a>The Core Concept: Intelligent Disaggregation</h2>
+<h2 id="_1_the_workhorse_ampere_a100_a10g"><a class="anchor" href="#_1_the_workhorse_ampere_a100_a10g"></a>1. The Workhorse: Ampere (A100, A10G)</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>The <code>llm-d</code> architecture follows a "split-plane" design that separates <strong>orchestration</strong> (Control Plane) from <strong>execution</strong> (Data Plane).</p>
-</div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>The Control Plane (The "Traffic Controller"):</strong> The <code>llm-d</code> Inference Scheduler. It maintains real-time metadata about all running model pods, tracks KV Cache locations, and makes intelligent routing decisions.</p>
+<p><strong>Era:</strong> The "Standard" (2020-2022).</p>
 </li>
 <li>
-<p><strong>The Data Plane (The "Workers"):</strong> The vLLM pods that actually run inference. These are managed by <code>llm-d</code> but execute the model computation.</p>
+<p><strong>The Card:</strong> <strong>NVIDIA A10G</strong> (24GB).</p>
+</li>
+<li>
+<p><strong>Best For:</strong> Most inference workloads (7B - 13B models).</p>
+</li>
+<li>
+<p><strong>The Reality:</strong></p>
+<div class="ulist">
+<ul>
+<li>
+<p>This is likely what your cloud provider or on-prem cluster has the most of.</p>
+</li>
+<li>
+<p>It excels at <strong>FP16</strong> (Half Precision) math.</p>
+</li>
+<li>
+<p><strong>Limitation:</strong> It lacks native hardware acceleration for FP8 (8-bit floating point). If you quantize to 8-bit, you are saving memory, but you aren&#8217;t gaining the massive compute speedup seen in newer cards.</p>
 </li>
 </ul>
-</div>
-<div class="paragraph">
-<p>This separation enables capabilities that standard deployments cannot provide: intelligent routing, cache affinity, and resource optimization.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_component_breakdown"><a class="anchor" href="#_component_breakdown"></a>Component Breakdown</h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="_1_the_inference_scheduler_control_plane"><a class="anchor" href="#_1_the_inference_scheduler_control_plane"></a>1. The Inference Scheduler (Control Plane)</h3>
-<div class="paragraph">
-<p>This is the "brain" of intelligent routing. It runs as a separate service in your cluster and makes routing decisions for every inference request.</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Technology:</strong> A Kubernetes-native controller that integrates with the Gateway API.</p>
-</li>
-<li>
-<p><strong>Function:</strong> Maintains a real-time view of all vLLM pods, their health, queue depth, and—critically—their KV Cache state.</p>
-</li>
-<li>
-<p><strong>The Intelligence:</strong> When a request arrives, the scheduler:</p>
-</li>
-<li>
-<p><strong>Filters</strong> unhealthy or overloaded pods.</p>
-</li>
-<li>
-<p><strong>Scores</strong> remaining pods based on queue length and <strong>KV Cache Affinity</strong> (does this pod already have the conversation context?).</p>
-</li>
-<li>
-<p><strong>Routes</strong> the request to the optimal pod.</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_2_the_gateway_api_integration"><a class="anchor" href="#_2_the_gateway_api_integration"></a>2. The Gateway API Integration</h3>
-<div class="paragraph">
-<p>The Gateway API (Envoy) acts as the "front door" for all inference traffic. It integrates with the Inference Scheduler to execute routing decisions.</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Technology:</strong> OpenShift Service Mesh or kGateway (Gateway API compliant).</p>
-</li>
-<li>
-<p><strong>Function:</strong> Intercepts HTTP requests, queries the scheduler for routing decisions, and forwards traffic to the selected pod.</p>
-</li>
-<li>
-<p><strong>The Flow:</strong></p>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p>User sends a request to <code>/v1/chat/completions</code>.</p>
-</li>
-<li>
-<p>Gateway intercepts and queries the scheduler: <strong>"Where should this go?"</strong></p>
-</li>
-<li>
-<p>Scheduler responds with a pod address (based on cache affinity and load).</p>
-</li>
-<li>
-<p>Gateway forwards the request to that specific pod.</p>
-</li>
-</ol>
 </div>
 </li>
 </ul>
 </div>
-</div>
-<div class="sect2">
-<h3 id="_3_the_vllm_pods_data_plane"><a class="anchor" href="#_3_the_vllm_pods_data_plane"></a>3. The vLLM Pods (Data Plane)</h3>
-<div class="paragraph">
-<p>These are the actual inference engines. In an <code>llm-d</code> deployment, they are organized into pools:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Prefill Pods:</strong> Handle the compute-intensive prompt processing. These are optimized for throughput.</p>
-</li>
-<li>
-<p><strong>Decode Pods:</strong> Handle the latency-sensitive token generation. These are optimized for memory and speed.</p>
-</li>
-<li>
-<p><strong>The KV Cache:</strong> Each pod maintains a cache of conversation contexts in GPU memory. The scheduler uses this cache state to make routing decisions.</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_4_model_source_flexibility"><a class="anchor" href="#_4_model_source_flexibility"></a>4. Model Source Flexibility</h3>
-<div class="paragraph">
-<p><code>llm-d</code> works with models from any source—your private registry, the public catalog, or Hugging Face. The intelligent routing and cache management apply <strong>regardless of the model source</strong>. Simply provide the model URI in the standard format (e.g., <code>hf://Qwen/Qwen3-0.6B</code> or <code>s3://your-bucket/model-path</code>).</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_the_data_flow_intelligent_request_lifecycle"><a class="anchor" href="#_the_data_flow_intelligent_request_lifecycle"></a>The Data Flow: Intelligent Request Lifecycle</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Understanding this flow is critical for troubleshooting and optimization. The scheduler makes the decision, but the Gateway moves the data.</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 20%;">
-<col style="width: 80%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top"><strong>Step</strong></th>
-<th class="tableblock halign-left valign-top"><strong>What Happens</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>1. Request In</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A user sends an OpenAI-compatible request (e.g., <code>/v1/chat/completions</code>) to the <code>HTTPRoute</code> endpoint.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>2. Gateway Intercepts</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The Gateway API (Envoy) in <code>openshift-ingress</code> receives the traffic and extracts request metadata (conversation ID, model name, etc.).</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>3. Scheduler Query</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The Gateway forwards the <strong>request metadata</strong> to the Inference Scheduler, effectively asking: <strong>"Where should this go?"</strong></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>4. Intelligent Decision (Filter &amp; Score)</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The scheduler executes its routing logic:
-* <strong>Filter:</strong> Removes unhealthy, overloaded, or incompatible pods.
-* <strong>Score:</strong> Scores remaining pods based on:
-  * Queue depth (lower is better).
-  * <strong>KV Cache Affinity</strong> (does this pod already hold the conversation context?).
-  * Resource availability.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>5. Routing Instruction</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The scheduler responds to the Gateway with a specific pod address:
-* <strong>Cache Hit (Fast Path):</strong> Routes to the Decode pod that already has the context.
-* <strong>Cache Miss (Slow Path):</strong> Routes to a Prefill pod first, then to a Decode pod for generation.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>6. Execution</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The Gateway forwards the actual data payload to the chosen pod. The pod generates the response and streams it back through the Gateway to the user.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_the_value_kv_cache_off_loading"><a class="anchor" href="#_the_value_kv_cache_off_loading"></a>The Value: KV Cache Off-Loading</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>The KV Cache is the "memory" of your inference service. It stores the conversation context (the processed prompt and generated tokens) in GPU memory. <code>llm-d</code> manages this cache intelligently:</p>
-</div>
-<div class="sect2">
-<h3 id="_cache_affinity_routing"><a class="anchor" href="#_cache_affinity_routing"></a>Cache Affinity Routing</h3>
-<div class="paragraph">
-<p>When a user continues a conversation, the scheduler checks which pod holds the relevant KV Cache. If found (cache hit), the request is routed directly to that pod, avoiding expensive Prefill computation.</p>
-</div>
-<div class="paragraph">
-<p><strong>The Benefit:</strong>
-* <strong>Lower Latency:</strong> Time-To-First-Token (TTFT) is dramatically reduced for cache hits.
-* <strong>Lower Cost:</strong> You skip the expensive Prefill phase, using GPU cycles only for generation.
-* <strong>Higher Throughput:</strong> More users can be served on the same hardware.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_cache_management_across_all_deployments"><a class="anchor" href="#_cache_management_across_all_deployments"></a>Cache Management Across All Deployments</h3>
-<div class="paragraph">
-<p>Whether you deploy from your private registry or the public catalog, <code>llm-d</code> provides intelligent cache management:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Automatic Cache Tracking:</strong> The scheduler maintains a map of cache locations across all pods.</p>
-</li>
-<li>
-<p><strong>Cache-Aware Scaling:</strong> When scaling up, new pods are populated with cache from existing pods when possible.</p>
-</li>
-<li>
-<p><strong>Cache Eviction:</strong> When memory pressure occurs, the scheduler intelligently evicts least-recently-used caches.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p><strong>The Win:</strong> Every model deployment benefits from intelligent cache management, maximizing the ROI of your GPU infrastructure.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_system_requirements_for_the_lab"><a class="anchor" href="#_system_requirements_for_the_lab"></a>System Requirements for the Lab</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>To build this architecture in the next module, your cluster must meet these minimums:</p>
-</div>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 20%;">
-<col style="width: 40%;">
-<col style="width: 40%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top"><strong>Component</strong></th>
-<th class="tableblock halign-left valign-top"><strong>Requirement</strong></th>
-<th class="tableblock halign-left valign-top"><strong>Role</strong></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>OpenShift AI</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">v3.0</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The Platform</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>OpenShift</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">4.19+ (4.20 recommended)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Required for Gateway API support</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Gateway API</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Compliant implementation (Service Mesh or kGateway)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The routing layer</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Operators</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">LeaderWorkerSet (LWS) Operator</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Manages pod fleets for <code>llm-d</code></p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Hardware</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Data Center GPUs (H100, A100, L40S)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">The inference engines</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Compute</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">2 vCPUs, 4GB RAM (per pod)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">For scheduler and workers</p></td>
-</tr>
-</tbody>
-</table>
-<div class="admonitionblock warning">
+<div class="admonitionblock note">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
+<i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
-<div class="title">Critical: Network Fabric Requirements</div>
-<div class="paragraph">
-<p><strong>Do not underestimate the network.</strong><br>
-High-performance "East-West" cache sharing requires a low-latency fabric (InfiniBand or RoCE). A standard 10GbE TCP/IP network will be a bottleneck and is <strong>not supported</strong> for advanced features like Mixture-of-Experts (MoE).</p>
-</div>
+<div class="title">The "L" Series (L4, L40S)</div>
+The <strong>Ada Lovelace</strong> generation (L4, L40S) acts as a bridge. It is newer than Ampere and <strong>does</strong> support FP8, making the <strong>L40S</strong> a fantastic, cheaper alternative to the A100 for inference.
 </td>
 </tr>
 </table>
 </div>
-<hr>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_2_the_speed_demon_hopper_h100"><a class="anchor" href="#_2_the_speed_demon_hopper_h100"></a>2. The Speed Demon: Hopper (H100)</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Era:</strong> The "Transformer Native" (2023+).</p>
+</li>
+<li>
+<p><strong>The Card:</strong> <strong>NVIDIA H100</strong> (80GB).</p>
+</li>
+<li>
+<p><strong>Best For:</strong> Large models (70B+) and high-throughput batching.</p>
+</li>
+<li>
+<p><strong>The Killer Feature:</strong> <strong>The Transformer Engine</strong>.</p>
+<div class="ulist">
+<ul>
+<li>
+<p>The H100 can natively process <strong>FP8</strong> data.</p>
+</li>
+<li>
+<p>This means it processes math twice as fast as FP16, while using half the memory bandwidth.</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><strong>The Strategy:</strong> If you have H100s, you <strong>must</strong> use FP8 quantization. Running standard FP16 models on an H100 leaves 50% of the performance on the table.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_3_the_future_blackwell_b100b200"><a class="anchor" href="#_3_the_future_blackwell_b100b200"></a>3. The Future: Blackwell (B100/B200)</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Era:</strong> The "Trillion Parameter" Scale.</p>
+</li>
+<li>
+<p><strong>The Innovation:</strong> <strong>FP4</strong> Support.</p>
+</li>
+<li>
+<p><strong>The Implication:</strong> This architecture is designed for models so massive they need to be compressed to 4-bits to run economically.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_summary_the_selection_matrix"><a class="anchor" href="#_summary_the_selection_matrix"></a>Summary: The Selection Matrix</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Workload</th>
+<th class="tableblock halign-left valign-top">Recommended Hardware</th>
+<th class="tableblock halign-left valign-top">Quantization Strategy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Small / Mid Models</strong>
+(Granite-2B, Llama-8B)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>NVIDIA A10G / L4</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FP16</code> or <code>INT8</code> (for memory savings)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Large Models</strong>
+(Granite-34B, Llama-70B)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>NVIDIA A100 / L40S</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>AWQ</code> (INT4) or <code>GPTQ</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Massive Scale</strong>
+(DeepSeek-V3, Llama-405B)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>NVIDIA H100</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>FP8</code> (Native Acceleration)</p></td>
+</tr>
+</tbody>
+</table>
 <div class="paragraph">
-<p><strong>Now that you understand the blueprint, it is time to deploy.</strong></p>
+<p><a href="#hardware-sizing.adoc" class="xref unresolved">Next: Calculate Your VRAM Requirements</a></p>
 </div>
 </div>
 </div>

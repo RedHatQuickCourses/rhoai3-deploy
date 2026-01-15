@@ -58,13 +58,22 @@
     <a class="nav-link" href="chapter1/index.html">Introduction &amp; Value</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section1.html">Architecture Deep Dive</a>
+    <a class="nav-link" href="chapter1/section1.html">GPU Architecture</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section2.html">The Deployment Lab</a>
+    <a class="nav-link" href="chapter1/section2.html">The Sizing Guide</a>
   </li>
   <li class="nav-item" data-depth="1">
-    <a class="nav-link" href="chapter1/section3.html">Troubleshooting</a>
+    <a class="nav-link" href="chapter1/section3.html">vLLM</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="chapter1/section4.html">vLLM Tuning</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="chapter1/section5.html">Deploy a Model</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="chapter1/section6.html">Testing</a>
   </li>
 </ul>
   </li>
@@ -107,131 +116,120 @@
 </aside>
 <article class="doc">
 <h1 class="page">Deploying Models with Intelligent Routing</h1>
-<h1 id="_from_registry_to_production_intelligent_model_deployment" class="sect0"><a class="anchor" href="#_from_registry_to_production_intelligent_model_deployment"></a>From Registry to Production: Intelligent Model Deployment</h1>
+<h1 id="_enterprise_model_serving_the_engineering_reality" class="sect0"><a class="anchor" href="#_enterprise_model_serving_the_engineering_reality"></a>Enterprise Model Serving: The Engineering Reality</h1>
 <div class="paragraph lead">
-<p><strong>Deploy models intelligently. Maximize GPU ROI.</strong></p>
+<p><strong>Inference is where the bill arrives.</strong></p>
 </div>
 <div class="paragraph">
-<p>You have models ready to deploy—whether from your private Model Registry, the public catalog, or Hugging Face. But deploying a model is only the first step. Making it work <strong>efficiently</strong> at scale is where the real challenge begins.</p>
+<p>In the experimentation phase, the only metric that matters is "intelligence"—how smart is the model?
+But in the production phase, the metrics change. Suddenly, you are judged on <strong>Latency</strong>, <strong>Throughput</strong>, and <strong>Cost Per Token</strong>.</p>
 </div>
 <div class="paragraph">
-<p>Standard model deployments treat every request the same. They waste GPU cycles recomputing context that already exists. They route requests randomly, leaving some pods overloaded while others sit idle. The result? You pay for expensive infrastructure that delivers suboptimal performance.</p>
+<p>A developer might download a 70-billion parameter model to a laptop and be impressed by its reasoning.
+A Platform Engineer looks at that same model and sees a massive infrastructure bill, potential <code>OutofMemory</code> errors, and a latency bottleneck that could kill the user experience.</p>
 </div>
 <div class="paragraph">
-<p>This course teaches you to deploy models using <strong>Distributed Inference with <code>llm-d</code></strong>—the intelligent routing framework that transforms expensive, idle infrastructure into a cost-efficient, high-performance inference service.</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="title">The Core Business Problem</div>
-<div class="paragraph">
-<p><strong>"Why should we deploy with <code>llm-d</code> when standard vLLM deployments work fine?"</strong></p>
-</div>
-<div class="paragraph">
-<p><strong>The Answer:</strong> Standard deployments treat every request the same. They waste GPU cycles recomputing context that already exists. <code>llm-d</code> provides <strong>intelligent routing</strong> and <strong>KV cache off-loading</strong> that ensures every model deployment—whether from your registry or the public catalog—operates at maximum efficiency.</p>
-</div>
-</td>
-</tr>
-</table>
+<p>This course is your guide to the <strong>Engineering Reality</strong> of AI.
+We are moving beyond "Shadow AI"—where users blindly deploy heavy models—to a governed "AI Factory" where inference is fast, efficient, and cost-effective by design.</p>
 </div>
 <div class="sect1">
-<h2 id="_the_challenge_the_idle_gpu_tax"><a class="anchor" href="#_the_challenge_the_idle_gpu_tax"></a>The Challenge: The "Idle GPU Tax"</h2>
+<h2 id="_the_core_challenge_will_it_fit"><a class="anchor" href="#_the_core_challenge_will_it_fit"></a>The Core Challenge: "Will It Fit?"</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>When you deploy a model using standard methods, you face a hidden cost problem:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>The Cold Start Penalty:</strong> Every new conversation requires the model to process the entire prompt from scratch (the "Prefill" phase). This is computationally expensive and slow.</p>
-</li>
-<li>
-<p><strong>The Cache Waste:</strong> When a user returns to continue a conversation, standard deployments cannot "remember" where that context lives. The system recomputes everything, burning GPU cycles and increasing latency.</p>
-</li>
-<li>
-<p><strong>The Resource Inefficiency:</strong> Without intelligent routing, requests are distributed randomly. One pod might be overloaded while another sits idle, wasting expensive hardware.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>The result? You pay for GPU capacity that delivers suboptimal performance.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_the_solution_intelligent_routing_with_llm_d"><a class="anchor" href="#_the_solution_intelligent_routing_with_llm_d"></a>The Solution: Intelligent Routing with llm-d</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p><strong>Distributed Inference with <code>llm-d</code></strong> solves this by adding a "Traffic Control" layer above your model deployments. It provides two critical capabilities that apply to <strong>all model deployments</strong>, regardless of source:</p>
-</div>
-<div class="sect2">
-<h3 id="_1_intelligent_cache_aware_routing"><a class="anchor" href="#_1_intelligent_cache_aware_routing"></a>1. Intelligent, Cache-Aware Routing</h3>
-<div class="paragraph">
-<p>Unlike standard round-robin load balancing, <code>llm-d</code> maintains a real-time map of which pods hold which conversation contexts (KV Cache). When a request arrives:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Cache Hit (Fast Path):</strong> The scheduler routes the request directly to the pod that already has the context loaded. This eliminates expensive Prefill computation and delivers near-instant response times.</p>
-</li>
-<li>
-<p><strong>Cache Miss (Slow Path):</strong> The scheduler routes to an available Prefill pod, processes the prompt, then routes subsequent tokens to a Decode pod for generation.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p><strong>The Win:</strong> You maximize GPU utilization by avoiding redundant computation.</p>
-</div>
-<div class="paragraph">
-<p><strong>The Benefit:</strong> Users experience consistent, low-latency responses even during peak load.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_2_kv_cache_off_loading_for_all_deployments"><a class="anchor" href="#_2_kv_cache_off_loading_for_all_deployments"></a>2. KV Cache Off-Loading for All Deployments</h3>
-<div class="paragraph">
-<p>The KV Cache (Key-Value Cache) stores the conversation context in GPU memory. <code>llm-d</code> manages this cache intelligently across your entire fleet:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Cache Affinity:</strong> Requests are routed to pods that already hold the relevant cache, reducing memory pressure and compute costs.</p>
-</li>
-<li>
-<p><strong>Cache Sharing:</strong> In advanced configurations, the cache can be shared across pods, enabling even greater efficiency for high-concurrency scenarios.</p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p><strong>The Win:</strong> Every model deployment—whether from your private registry or the public catalog—benefits from intelligent cache management.</p>
-</div>
-<div class="paragraph">
-<p><strong>The Benefit:</strong> You can serve more concurrent users on the same hardware, directly improving your cost-per-token ratio.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_the_complete_deployment_story"><a class="anchor" href="#_the_complete_deployment_story"></a>The Complete Deployment Story</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>This course covers the full lifecycle of intelligent model deployment:</p>
+<p>Deploying an LLM is not like deploying a microservice. You cannot just throw it into a container and hope for the best.
+You must answer three critical questions before you ever run a <code>kubectl apply</code>:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p><strong>The Foundation:</strong> Understand how <code>llm-d</code> provides intelligent routing and KV cache management for all model deployments.</p>
+<p><strong>The Selection:</strong> Is this model the right size for the task, or are we burning GPU cycles on overkill?</p>
 </li>
 <li>
-<p><strong>The Deployment:</strong> Deploy your model using <code>llm-d</code>, whether from your private registry, the public catalog, or Hugging Face.</p>
+<p><strong>The Hardware:</strong> Do we have enough Video RAM (VRAM) to handle the model weights <strong>plus</strong> the concurrent user traffic (KV Cache)?</p>
 </li>
 <li>
-<p><strong>The Payoff:</strong> Your model serves users efficiently, with every GPU cycle optimized for performance and cost.</p>
+<p><strong>The Engine:</strong> Is our runtime (vLLM) tuned to maximize throughput, or are we leaving performance on the table?</p>
 </li>
 </ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_serving_workflow"><a class="anchor" href="#_the_serving_workflow"></a>The Serving Workflow</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this course, we will break down the black box of model serving into a repeatable engineering process.</p>
+</div>
+<div class="sect2">
+<h3 id="_1_smart_model_selection"><a class="anchor" href="#_1_smart_model_selection"></a>1. Smart Model Selection</h3>
+<div class="paragraph">
+<p>You don&#8217;t have to benchmark 900,000 models from scratch.
+We will explore tools like the <strong>Red Hat AI Validated Model Repository</strong>, which acts as a shortcut. It provides pre-vetted models with known performance profiles, allowing you to skip the "guesswork" phase and select models that are guaranteed to work on your hardware.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_hardware_sizing_the_math"><a class="anchor" href="#_2_hardware_sizing_the_math"></a>2. Hardware Sizing (The Math)</h3>
+<div class="paragraph">
+<p>We will teach you the formula to calculate the true cost of a model.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Weights vs. Cache:</strong> Understanding why a model that "fits" when idle crashes when under load.</p>
+</li>
+<li>
+<p><strong>Quantization:</strong> How to use formats like <code>FP8</code> or <code>INT8</code> to run massive models on smaller, cheaper GPUs without sacrificing intelligence.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_3_the_engine_vllm_tuning"><a class="anchor" href="#_3_the_engine_vllm_tuning"></a>3. The Engine: vLLM Tuning</h3>
+<div class="paragraph">
+<p>We will look under the hood of <strong>vLLM</strong>, the standard inference engine for OpenShift AI.
+You will learn to tune critical parameters like:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>max-model-len</code>: Managing the context window to prevent memory overflows.</p>
+</li>
+<li>
+<p><code>gpu-memory-utilization</code>: Optimizing VRAM allocation for high-throughput batching.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_4_automated_deployment_gitops"><a class="anchor" href="#_4_automated_deployment_gitops"></a>4. Automated Deployment (GitOps)</h3>
+<div class="paragraph">
+<p>Finally, we will abandon the "Click-Ops" dashboard.
+You will deploy a production-ready <strong>InferenceService</strong> using a parameterized script. This moves your infrastructure from "manual configuration" to "code," enabling reproducible and scalable deployments.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_our_laboratory_model_granite_3_3_2b"><a class="anchor" href="#_our_laboratory_model_granite_3_3_2b"></a>Our Laboratory Model: Granite-3.3-2B</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To practice these concepts without requiring a massive GPU cluster, we will standardize on the <strong>IBM Granite-3.3-2B-Instruct</strong> model.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Why this model?</strong></p>
+</li>
+<li>
+<p><strong>Efficiency:</strong> Its small size (2 Billion parameters) allows us to deploy it quickly and experiment with tuning parameters on standard hardware.</p>
+</li>
+<li>
+<p><strong>Modern Architecture:</strong> It uses the same underlying technology as massive 70B+ models, meaning the sizing and tuning lessons you learn here directly apply to enterprise-scale deployments.</p>
+</li>
+<li>
+<p><strong>Transparency:</strong> It is fully open-source (Apache 2.0) with disclosed training data, representing the gold standard for trusted enterprise AI.</p>
+</li>
+</ul>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -247,13 +245,10 @@
 <div class="ulist">
 <ul>
 <li>
-<p>Access to a <strong>Red Hat OpenShift AI 3.0</strong> cluster.</p>
+<p>Access to a <strong>Red Hat OpenShift AI</strong> cluster.</p>
 </li>
 <li>
-<p>A model ready to deploy (from your private registry, the public catalog, or Hugging Face). We will use <code>Qwen/Qwen3-0.6B</code> as an example.</p>
-</li>
-<li>
-<p><code>cluster-admin</code> privileges (to install required operators and configure the Gateway API).</p>
+<p>A basic understanding of Kubernetes (Pods, Services, Routes).</p>
 </li>
 <li>
 <p>The <code>oc</code> CLI tool installed in your terminal.</p>
@@ -264,36 +259,9 @@
 </tr>
 </table>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_your_mission_deploy_with_intelligence"><a class="anchor" href="#_your_mission_deploy_with_intelligence"></a>Your Mission: Deploy with Intelligence</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>In this course, you will not just deploy a model; you will deploy it <strong>intelligently</strong>. You will take on the role of a Platform Engineer tasked with transforming a registered model into a production-grade inference service.</p>
-</div>
-<div class="paragraph">
-<p><strong>You will execute the following Technical Workflow:</strong></p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>The Architecture:</strong> Understand how <code>llm-d</code> provides intelligent routing and KV cache off-loading for all model deployments.</p>
-</li>
-<li>
-<p><strong>The Foundation:</strong> Verify Gateway API support and install operators (if needed for multi-node or MoE deployments).</p>
-</li>
-<li>
-<p><strong>The Deployment:</strong> Deploy your model using the <code>llm-d</code> runtime, configuring intelligent routing and cache management.</p>
-</li>
-<li>
-<p><strong>The Validation:</strong> Verify that requests are routed intelligently and that KV cache hits reduce latency and cost.</p>
-</li>
-</ol>
-</div>
 <hr>
 <div class="paragraph">
-<p><strong>Ready to deploy? Let&#8217;s start by understanding the architecture.</strong></p>
+<p><strong>The goal is efficient inference. Let&#8217;s start by calculating the cost.</strong></p>
 </div>
 </div>
 </div>
