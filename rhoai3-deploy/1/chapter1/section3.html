@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Troubleshooting &amp; Day 2 Operations :: Intelligent Model Deployment with llm-d</title>
+    <link rel="prev" href="section2.html">
+    <link rel="next" href="index.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Intelligent Model Deployment with llm-d</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/REPLACEREPONAME/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="rhoai3-deploy" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Intelligent Model Deployment with llm-d</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section1.html">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section2.html">The Deployment Lab</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="section3.html">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section1.html">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section2.html">The Deployment Lab</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="section3.html">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Intelligent Model Deployment with llm-d</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Intelligent Model Deployment with llm-d</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Intelligent Model Deployment with llm-d</a></li>
+    <li><a href="section3.html">Troubleshooting</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Troubleshooting &amp; Day 2 Operations</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p><strong>Intelligent systems require intelligent debugging. You need to know how to verify that routing is working correctly.</strong></p>
+</div>
+<div class="paragraph">
+<p>Even with intelligent routing, deployments can encounter issues. The scheduler might not be routing correctly, pods might fail to start, or cache hits might not be occurring as expected.</p>
+</div>
+<div class="paragraph">
+<p>This section equips you with the <strong>SRE (Site Reliability Engineering) Playbook</strong> for <code>llm-d</code> deployments.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_1_debugging_the_traffic_controller_inference_scheduler"><a class="anchor" href="#_1_debugging_the_traffic_controller_inference_scheduler"></a>1. Debugging the "Traffic Controller" (Inference Scheduler)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If requests are not being routed intelligently, or if you see errors in the Gateway logs, start here.</p>
+</div>
+<div class="sect2">
+<h3 id="_check_1_is_the_scheduler_running"><a class="anchor" href="#_check_1_is_the_scheduler_running"></a>Check 1: Is the Scheduler Running?</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pods -n &lt;your-namespace&gt; -l component=inference-scheduler</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Status <code>CrashLoopBackOff</code>:</strong> Usually means the scheduler cannot connect to the Gateway API or the pool configuration is invalid.
+* <strong>Status <code>ImagePullBackOff</code>:</strong> Check your cluster&#8217;s internet connectivity or image registry credentials.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_check_2_the_scheduler_logs"><a class="anchor" href="#_check_2_the_scheduler_logs"></a>Check 2: The Scheduler Logs</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc logs -n &lt;your-namespace&gt; -l component=inference-scheduler --tail=100</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Look for:</strong>
+  * <code>Failed to connect to pool</code>: The scheduler cannot find the inference pool. Verify the <code>pool-name</code> and <code>pool-namespace</code> in your <code>LLMInferenceService</code>.
+  * <code>No healthy endpoints</code>: The scheduler cannot find any healthy vLLM pods. Check the worker pod status.
+  * <code>Cache hit</code> or <code>Cache miss</code>: These messages confirm that cache-aware routing is working.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_check_3_verify_pool_configuration"><a class="anchor" href="#_check_3_verify_pool_configuration"></a>Check 3: Verify Pool Configuration</h3>
+<div class="paragraph">
+<p>The scheduler connects to an "inference pool" that groups your vLLM pods. Verify this pool exists:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get inferencepool -n &lt;your-namespace&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Expected:</strong> You should see a pool with a name matching your <code>LLMInferenceService</code> (e.g., <code>qwen-registry-inference-pool</code>).</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_2_debugging_the_workers_vllm_pods"><a class="anchor" href="#_2_debugging_the_workers_vllm_pods"></a>2. Debugging the "Workers" (vLLM Pods)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If the scheduler is running but requests are failing, check the worker pods.</p>
+</div>
+<div class="sect2">
+<h3 id="_check_1_are_the_pods_running"><a class="anchor" href="#_check_1_are_the_pods_running"></a>Check 1: Are the Pods Running?</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pods -n &lt;your-namespace&gt; -l component=vllm-worker</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Status <code>CrashLoopBackOff</code>:</strong> Usually means the model failed to load or GPU resources are unavailable.
+* <strong>Status <code>Pending</code>:</strong> Usually means no GPU nodes are available or resource quotas are exceeded.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_check_2_the_worker_logs"><a class="anchor" href="#_check_2_the_worker_logs"></a>Check 2: The Worker Logs</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc logs -n &lt;your-namespace&gt; -l component=vllm-worker --tail=100</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Look for:</strong>
+  * <code>CUDA out of memory</code>: The model is too large for the available GPU memory. Reduce <code>max-model-len</code> or use a smaller model.
+  * <code>Failed to load model</code>: The model URI is invalid or inaccessible. Verify the <code>model.uri</code> in your <code>LLMInferenceService</code>.
+  * <code>KV cache initialized</code>: Confirms that cache management is active.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_check_3_gpu_availability"><a class="anchor" href="#_check_3_gpu_availability"></a>Check 3: GPU Availability</h3>
+<div class="paragraph">
+<p>Verify that GPUs are available and allocated:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc describe node | grep -A 5 "nvidia.com/gpu"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Expected:</strong> You should see GPU resources available on worker nodes.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pods -n &lt;your-namespace&gt; -l component=vllm-worker -o jsonpath='{.items[*].spec.containers[*].resources.limits.nvidia\.com/gpu}'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Expected:</strong> Each pod should have <code>1</code> GPU allocated.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_3_debugging_intelligent_routing_cache_hits_not_occurring"><a class="anchor" href="#_3_debugging_intelligent_routing_cache_hits_not_occurring"></a>3. Debugging Intelligent Routing (Cache Hits Not Occurring)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If your deployment is running but cache hits are not occurring (routing is not intelligent), verify the routing configuration.</p>
+</div>
+<div class="sect2">
+<h3 id="_check_1_verify_scheduler_configuration"><a class="anchor" href="#_check_1_verify_scheduler_configuration"></a>Check 1: Verify Scheduler Configuration</h3>
+<div class="paragraph">
+<p>The scheduler must have the cache-aware plugins enabled. Check your <code>LLMInferenceService</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get llminferenceservice &lt;your-service-name&gt; -n &lt;your-namespace&gt; -o yaml | grep -A 20 "scheduler:"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Look for:</strong>
+  * <code>kv-cache-utilization-scorer</code>: Must be present in the <code>plugins</code> list.
+  * <code>prefix-cache-scorer</code>: Must be present in the <code>plugins</code> list.
+  * <code>schedulingProfiles</code>: Must include these plugins with appropriate weights.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_check_2_monitor_cache_hit_rate"><a class="anchor" href="#_check_2_monitor_cache_hit_rate"></a>Check 2: Monitor Cache Hit Rate</h3>
+<div class="paragraph">
+<p>Use Prometheus to check if cache hits are occurring:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Query the cache hit rate metric
+oc exec -n openshift-monitoring -c prometheus prometheus-k8s-0 -- \
+  promtool query instant 'vllm_llmd_kv_cache_hit_rate' --time=$(date +%s)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Expected:</strong> After sending multiple requests with the same prompt, this value should be &gt; 0 (indicating cache hits).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_check_3_verify_gateway_integration"><a class="anchor" href="#_check_3_verify_gateway_integration"></a>Check 3: Verify Gateway Integration</h3>
+<div class="paragraph">
+<p>The Gateway must be able to query the scheduler. Check the HTTPRoute:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get httproute -n &lt;your-namespace&gt; -o yaml</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Look for:</strong>
+  * <code>parentRefs</code>: Should reference the <code>openshift-ai-inference</code> gateway.
+  * <code>backendRefs</code>: Should point to your inference service.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_4_debugging_model_loading"><a class="anchor" href="#_4_debugging_model_loading"></a>4. Debugging Model Loading</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If your model fails to load, verify the model URI and storage access.</p>
+</div>
+<div class="sect2">
+<h3 id="_check_1_verify_model_uri"><a class="anchor" href="#_check_1_verify_model_uri"></a>Check 1: Verify Model URI</h3>
+<div class="paragraph">
+<p>The <code>model.uri</code> in your <code>LLMInferenceService</code> must use the correct format:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get llminferenceservice &lt;your-service-name&gt; -n &lt;your-namespace&gt; -o jsonpath='{.spec.model.uri}'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>For Hugging Face:</strong> Should be <code>hf://&lt;model-name&gt;</code> (e.g., <code>hf://Qwen/Qwen3-0.6B</code>).
+* <strong>For Private S3:</strong> Should be <code>s3://&lt;bucket&gt;/&lt;path&gt;</code>.
+* <strong>For OCI Registry:</strong> Should be <code>oci://&lt;registry&gt;/&lt;image&gt;</code>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_check_2_verify_storage_access"><a class="anchor" href="#_check_2_verify_storage_access"></a>Check 2: Verify Storage Access</h3>
+<div class="paragraph">
+<p>If using private S3 storage, verify that the pods can access it:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Exec into a worker pod and test S3 connectivity
+oc rsh -n &lt;your-namespace&gt; &lt;vllm-worker-pod-name&gt; curl -v &lt;your-s3-endpoint&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+* <strong>Expected:</strong> Should return a successful connection (may require authentication).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_check_3_verify_model_availability"><a class="anchor" href="#_check_3_verify_model_availability"></a>Check 3: Verify Model Availability</h3>
+<div class="paragraph">
+<p>For Hugging Face models, verify the model name is correct. For private storage, verify the path exists and is accessible:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Test Hugging Face model access (from a pod with internet access)
+curl -I https://huggingface.co/Qwen/Qwen3-0.6B</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_5_performance_optimization"><a class="anchor" href="#_5_performance_optimization"></a>5. Performance Optimization</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Once your deployment is working, optimize for better cache hit rates and lower latency.</p>
+</div>
+<div class="sect2">
+<h3 id="_optimize_cache_hit_rate"><a class="anchor" href="#_optimize_cache_hit_rate"></a>Optimize Cache Hit Rate</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Increase Cache Weight:</strong> In your <code>LLMInferenceService</code>, increase the weight of <code>kv-cache-utilization-scorer</code> and <code>prefix-cache-scorer</code> relative to <code>queue-scorer</code>.</p>
+</li>
+<li>
+<p><strong>Use Consistent Prompts:</strong> Design your application to use consistent system prompts and conversation prefixes to maximize cache reuse.</p>
+</li>
+<li>
+<p><strong>Monitor Cache Eviction:</strong> Check <code>vllm_llmd_kv_cache_evictions</code> to see if cache is being evicted too frequently. If so, increase GPU memory allocation.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_optimize_latency"><a class="anchor" href="#_optimize_latency"></a>Optimize Latency</h3>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Prefill/Decode Disaggregation:</strong> For high-concurrency scenarios, consider splitting Prefill and Decode into separate pools (advanced configuration).</p>
+</li>
+<li>
+<p><strong>Reduce Model Length:</strong> If <code>max-model-len</code> is too high, reduce it to free GPU memory for larger cache.</p>
+</li>
+<li>
+<p><strong>Scale Horizontally:</strong> Add more worker pods to distribute load and increase cache capacity.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_6_emergency_reset_the_nuke_it_option"><a class="anchor" href="#_6_emergency_reset_the_nuke_it_option"></a>6. Emergency Reset (The "Nuke It" Option)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If your environment is hopelessly tangled and you need to restart the deployment from scratch:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># 1. Delete the LLMInferenceService (This deletes all pods and routes)
+oc delete llminferenceservice &lt;your-service-name&gt; -n &lt;your-namespace&gt;
+
+# 2. Wait for cleanup
+oc get pods -n &lt;your-namespace&gt; -w
+
+# 3. Re-apply your deployment
+oc apply -f llm-inference-service.yaml</code></pre>
+</div>
+</div>
+<hr>
+<div class="paragraph">
+<p><strong>You now have the full lifecycle: Deploy, Operate, and Fix. You are ready to run intelligent inference at scale.</strong></p>
+</div>
+<div class="paragraph">
+<p><a href="index.html" class="xref page">Return to Start</a></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="section2.html">The Deployment Lab</a></span>
+  <span class="next"><a href="index.html">Introduction &amp; Value</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Architecture: Intelligent Routing for Model Deployment :: Intelligent Model Deployment with llm-d</title>
+    <link rel="prev" href="../index.html">
+    <link rel="next" href="section2.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Intelligent Model Deployment with llm-d</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/REPLACEREPONAME/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="rhoai3-deploy" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Intelligent Model Deployment with llm-d</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="section1.html">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section2.html">The Deployment Lab</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section3.html">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="section1.html">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section2.html">The Deployment Lab</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section3.html">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Intelligent Model Deployment with llm-d</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Intelligent Model Deployment with llm-d</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Intelligent Model Deployment with llm-d</a></li>
+    <li><a href="section1.html">Architecture Deep Dive</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Architecture: Intelligent Routing for Model Deployment</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p><strong>Understanding the difference between "deploying a model" and "deploying intelligently" is the key to production-grade AI.</strong></p>
+</div>
+<div class="paragraph">
+<p>When you deploy a model from your registry, you have a choice: use standard serving (simple, but wasteful) or use <strong>Distributed Inference with <code>llm-d</code></strong> (intelligent, efficient, and production-ready).</p>
+</div>
+<div class="paragraph">
+<p>This section explains how <code>llm-d</code> transforms every model deployment—whether from your private registry or the public catalog—into an intelligent, cache-aware service that maximizes GPU ROI.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_core_concept_intelligent_disaggregation"><a class="anchor" href="#_the_core_concept_intelligent_disaggregation"></a>The Core Concept: Intelligent Disaggregation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The <code>llm-d</code> architecture follows a "split-plane" design that separates <strong>orchestration</strong> (Control Plane) from <strong>execution</strong> (Data Plane).</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>The Control Plane (The "Traffic Controller"):</strong> The <code>llm-d</code> Inference Scheduler. It maintains real-time metadata about all running model pods, tracks KV Cache locations, and makes intelligent routing decisions.</p>
+</li>
+<li>
+<p><strong>The Data Plane (The "Workers"):</strong> The vLLM pods that actually run inference. These are managed by <code>llm-d</code> but execute the model computation.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This separation enables capabilities that standard deployments cannot provide: intelligent routing, cache affinity, and resource optimization.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_component_breakdown"><a class="anchor" href="#_component_breakdown"></a>Component Breakdown</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_1_the_inference_scheduler_control_plane"><a class="anchor" href="#_1_the_inference_scheduler_control_plane"></a>1. The Inference Scheduler (Control Plane)</h3>
+<div class="paragraph">
+<p>This is the "brain" of intelligent routing. It runs as a separate service in your cluster and makes routing decisions for every inference request.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Technology:</strong> A Kubernetes-native controller that integrates with the Gateway API.</p>
+</li>
+<li>
+<p><strong>Function:</strong> Maintains a real-time view of all vLLM pods, their health, queue depth, and—critically—their KV Cache state.</p>
+</li>
+<li>
+<p><strong>The Intelligence:</strong> When a request arrives, the scheduler:</p>
+</li>
+<li>
+<p><strong>Filters</strong> unhealthy or overloaded pods.</p>
+</li>
+<li>
+<p><strong>Scores</strong> remaining pods based on queue length and <strong>KV Cache Affinity</strong> (does this pod already have the conversation context?).</p>
+</li>
+<li>
+<p><strong>Routes</strong> the request to the optimal pod.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_the_gateway_api_integration"><a class="anchor" href="#_2_the_gateway_api_integration"></a>2. The Gateway API Integration</h3>
+<div class="paragraph">
+<p>The Gateway API (Envoy) acts as the "front door" for all inference traffic. It integrates with the Inference Scheduler to execute routing decisions.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Technology:</strong> OpenShift Service Mesh or kGateway (Gateway API compliant).</p>
+</li>
+<li>
+<p><strong>Function:</strong> Intercepts HTTP requests, queries the scheduler for routing decisions, and forwards traffic to the selected pod.</p>
+</li>
+<li>
+<p><strong>The Flow:</strong></p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>User sends a request to <code>/v1/chat/completions</code>.</p>
+</li>
+<li>
+<p>Gateway intercepts and queries the scheduler: <strong>"Where should this go?"</strong></p>
+</li>
+<li>
+<p>Scheduler responds with a pod address (based on cache affinity and load).</p>
+</li>
+<li>
+<p>Gateway forwards the request to that specific pod.</p>
+</li>
+</ol>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_3_the_vllm_pods_data_plane"><a class="anchor" href="#_3_the_vllm_pods_data_plane"></a>3. The vLLM Pods (Data Plane)</h3>
+<div class="paragraph">
+<p>These are the actual inference engines. In an <code>llm-d</code> deployment, they are organized into pools:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Prefill Pods:</strong> Handle the compute-intensive prompt processing. These are optimized for throughput.</p>
+</li>
+<li>
+<p><strong>Decode Pods:</strong> Handle the latency-sensitive token generation. These are optimized for memory and speed.</p>
+</li>
+<li>
+<p><strong>The KV Cache:</strong> Each pod maintains a cache of conversation contexts in GPU memory. The scheduler uses this cache state to make routing decisions.</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_4_model_source_flexibility"><a class="anchor" href="#_4_model_source_flexibility"></a>4. Model Source Flexibility</h3>
+<div class="paragraph">
+<p><code>llm-d</code> works with models from any source—your private registry, the public catalog, or Hugging Face. The intelligent routing and cache management apply <strong>regardless of the model source</strong>. Simply provide the model URI in the standard format (e.g., <code>hf://Qwen/Qwen3-0.6B</code> or <code>s3://your-bucket/model-path</code>).</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_data_flow_intelligent_request_lifecycle"><a class="anchor" href="#_the_data_flow_intelligent_request_lifecycle"></a>The Data Flow: Intelligent Request Lifecycle</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Understanding this flow is critical for troubleshooting and optimization. The scheduler makes the decision, but the Gateway moves the data.</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 80%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top"><strong>Step</strong></th>
+<th class="tableblock halign-left valign-top"><strong>What Happens</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>1. Request In</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A user sends an OpenAI-compatible request (e.g., <code>/v1/chat/completions</code>) to the <code>HTTPRoute</code> endpoint.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>2. Gateway Intercepts</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Gateway API (Envoy) in <code>openshift-ingress</code> receives the traffic and extracts request metadata (conversation ID, model name, etc.).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>3. Scheduler Query</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Gateway forwards the <strong>request metadata</strong> to the Inference Scheduler, effectively asking: <strong>"Where should this go?"</strong></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>4. Intelligent Decision (Filter &amp; Score)</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The scheduler executes its routing logic:
+* <strong>Filter:</strong> Removes unhealthy, overloaded, or incompatible pods.
+* <strong>Score:</strong> Scores remaining pods based on:
+  * Queue depth (lower is better).
+  * <strong>KV Cache Affinity</strong> (does this pod already hold the conversation context?).
+  * Resource availability.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>5. Routing Instruction</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The scheduler responds to the Gateway with a specific pod address:
+* <strong>Cache Hit (Fast Path):</strong> Routes to the Decode pod that already has the context.
+* <strong>Cache Miss (Slow Path):</strong> Routes to a Prefill pod first, then to a Decode pod for generation.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>6. Execution</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Gateway forwards the actual data payload to the chosen pod. The pod generates the response and streams it back through the Gateway to the user.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_value_kv_cache_off_loading"><a class="anchor" href="#_the_value_kv_cache_off_loading"></a>The Value: KV Cache Off-Loading</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The KV Cache is the "memory" of your inference service. It stores the conversation context (the processed prompt and generated tokens) in GPU memory. <code>llm-d</code> manages this cache intelligently:</p>
+</div>
+<div class="sect2">
+<h3 id="_cache_affinity_routing"><a class="anchor" href="#_cache_affinity_routing"></a>Cache Affinity Routing</h3>
+<div class="paragraph">
+<p>When a user continues a conversation, the scheduler checks which pod holds the relevant KV Cache. If found (cache hit), the request is routed directly to that pod, avoiding expensive Prefill computation.</p>
+</div>
+<div class="paragraph">
+<p><strong>The Benefit:</strong>
+* <strong>Lower Latency:</strong> Time-To-First-Token (TTFT) is dramatically reduced for cache hits.
+* <strong>Lower Cost:</strong> You skip the expensive Prefill phase, using GPU cycles only for generation.
+* <strong>Higher Throughput:</strong> More users can be served on the same hardware.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_cache_management_across_all_deployments"><a class="anchor" href="#_cache_management_across_all_deployments"></a>Cache Management Across All Deployments</h3>
+<div class="paragraph">
+<p>Whether you deploy from your private registry or the public catalog, <code>llm-d</code> provides intelligent cache management:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Automatic Cache Tracking:</strong> The scheduler maintains a map of cache locations across all pods.</p>
+</li>
+<li>
+<p><strong>Cache-Aware Scaling:</strong> When scaling up, new pods are populated with cache from existing pods when possible.</p>
+</li>
+<li>
+<p><strong>Cache Eviction:</strong> When memory pressure occurs, the scheduler intelligently evicts least-recently-used caches.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p><strong>The Win:</strong> Every model deployment benefits from intelligent cache management, maximizing the ROI of your GPU infrastructure.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_system_requirements_for_the_lab"><a class="anchor" href="#_system_requirements_for_the_lab"></a>System Requirements for the Lab</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To build this architecture in the next module, your cluster must meet these minimums:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top"><strong>Component</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Requirement</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Role</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>OpenShift AI</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">v3.0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Platform</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>OpenShift</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4.19+ (4.20 recommended)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Required for Gateway API support</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Gateway API</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Compliant implementation (Service Mesh or kGateway)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The routing layer</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Operators</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">LeaderWorkerSet (LWS) Operator</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Manages pod fleets for <code>llm-d</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Hardware</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Data Center GPUs (H100, A100, L40S)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The inference engines</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Compute</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2 vCPUs, 4GB RAM (per pod)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">For scheduler and workers</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+<div class="title">Critical: Network Fabric Requirements</div>
+<div class="paragraph">
+<p><strong>Do not underestimate the network.</strong><br>
+High-performance "East-West" cache sharing requires a low-latency fabric (InfiniBand or RoCE). A standard 10GbE TCP/IP network will be a bottleneck and is <strong>not supported</strong> for advanced features like Mixture-of-Experts (MoE).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<hr>
+<div class="paragraph">
+<p><strong>Now that you understand the blueprint, it is time to deploy.</strong></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="../index.html">Introduction &amp; Value</a></span>
+  <span class="next"><a href="section2.html">The Deployment Lab</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Lab: Deploying Models with Intelligent Routing :: Intelligent Model Deployment with llm-d</title>
+    <link rel="prev" href="section1.html">
+    <link rel="next" href="section3.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Intelligent Model Deployment with llm-d</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/REPLACEREPONAME/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="rhoai3-deploy" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Intelligent Model Deployment with llm-d</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section1.html">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="section2.html">The Deployment Lab</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section3.html">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section1.html">Architecture Deep Dive</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="section2.html">The Deployment Lab</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="section3.html">Troubleshooting</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Intelligent Model Deployment with llm-d</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Intelligent Model Deployment with llm-d</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Intelligent Model Deployment with llm-d</a></li>
+    <li><a href="section2.html">The Deployment Lab</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Lab: Deploying Models with Intelligent Routing</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph lead">
+<p><strong>Theory is over. It is time to deploy intelligently.</strong></p>
+</div>
+<div class="paragraph">
+<p>In this lab, you will take on the role of a <strong>Platform Engineer</strong>. You have a model registered in your private Model Registry (from the previous course). Your task is to deploy that model using <strong>Distributed Inference with <code>llm-d</code></strong>, enabling intelligent routing and KV cache off-loading that maximizes GPU efficiency.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="title">Prerequisites</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Model Ready:</strong> You have a model ready to deploy (from your private registry, the public catalog, or Hugging Face). We will use <code>Qwen/Qwen3-0.6B</code> as an example.</p>
+</li>
+<li>
+<p><strong>Cluster Access:</strong> You are logged into an OpenShift AI 3.0 cluster via terminal (<code>oc login</code>).</p>
+</li>
+<li>
+<p><strong>Permissions:</strong> You have <code>cluster-admin</code> or sufficient namespace privileges.</p>
+</li>
+<li>
+<p><strong>Repository:</strong> You have access to the deployment configurations (we will provide the YAML).</p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_1_foundation_verify_prerequisites"><a class="anchor" href="#_step_1_foundation_verify_prerequisites"></a>Step 1: Foundation - Verify Prerequisites</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before deploying with <code>llm-d</code>, verify that your cluster has the required infrastructure components.</p>
+</div>
+<div class="sect2">
+<h3 id="_1_1_install_the_leaderworkerset_lws_operator_multi_node_moe_only"><a class="anchor" href="#_1_1_install_the_leaderworkerset_lws_operator_multi_node_moe_only"></a>1.1 Install the LeaderWorkerSet (LWS) Operator (Multi-Node &amp; MoE Only)</h3>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">When You Need LeaderWorkerSet</div>
+<div class="paragraph">
+<p>The LeaderWorkerSet Operator is <strong>only required</strong> for:
+* <strong>Multi-node deployments:</strong> When your model is too large for a single node and requires sharding across multiple nodes.
+* <strong>Mixture-of-Experts (MoE) models:</strong> When deploying MoE models that require expert parallelism across nodes.</p>
+</div>
+<div class="paragraph">
+<p>For <strong>single-node deployments</strong> (most common use case), the LeaderWorkerSet Operator is <strong>not required</strong>. You can skip this step.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>If you are deploying a multi-node or MoE model, install the LeaderWorkerSet Operator:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Install via OpenShift Console:</strong></p>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Navigate to <strong>Operators</strong> → <strong>OperatorHub</strong>.</p>
+</li>
+<li>
+<p>Search for <strong>"Leader Worker Set"</strong>.</p>
+</li>
+<li>
+<p>Click <strong>Install</strong> and accept the defaults.</p>
+</li>
+<li>
+<p>Wait for the operator to be <strong>Installed</strong> (Status: Succeeded).</p>
+</li>
+</ol>
+</div>
+</li>
+<li>
+<p><strong>Verify Installation:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get csv -n openshift-operators | grep leader-worker-set</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Expected Output:</strong></p>
+</div>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>leader-worker-set-operator.v1.x.x    Succeeded</pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">Single-Node Deployments</div>
+<div class="paragraph">
+<p>If you are deploying a standard model on a single node (the most common scenario), you can skip the LeaderWorkerSet installation and proceed directly to Step 1.2.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_1_2_verify_gateway_api_support"><a class="anchor" href="#_1_2_verify_gateway_api_support"></a>1.2 Verify Gateway API Support</h3>
+<div class="paragraph">
+<p>The Gateway API is required for intelligent routing. OpenShift AI 3.0 includes Gateway API support via Service Mesh or kGateway.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Check Gateway API CRDs:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get crd | grep gateway</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Expected Output:</strong> You should see <code>httproutes.gateway.networking.k8s.io</code> and related CRDs.</p>
+</div>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">If Gateway API is Not Available</div>
+<div class="paragraph">
+<p>If you do not see Gateway API CRDs, you may need to install OpenShift Service Mesh or kGateway. Consult your cluster administrator or the OpenShift AI 3.0 documentation.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_2_deploy_your_registered_model_with_llm_d"><a class="anchor" href="#_step_2_deploy_your_registered_model_with_llm_d"></a>Step 2: Deploy Your Registered Model with llm-d</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Now that the foundation is in place, you will deploy the model from your registry using the <code>llm-d</code> runtime. This enables intelligent routing and KV cache off-loading.</p>
+</div>
+<div class="sect2">
+<h3 id="_2_1_create_the_project"><a class="anchor" href="#_2_1_create_the_project"></a>2.1 Create the Project</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Create a namespace for your deployment:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc new-project my-llmd-deployment</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_2_deploy_using_llminferenceservice"><a class="anchor" href="#_2_2_deploy_using_llminferenceservice"></a>2.2 Deploy Using LLMInferenceService</h3>
+<div class="paragraph">
+<p>The <code>LLMInferenceService</code> Custom Resource tells the OpenShift AI operator to deploy your model using the <code>llm-d</code> runtime with intelligent routing enabled.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Create the Deployment YAML:</strong></p>
+<div class="paragraph">
+<p>Save the following as <code>llm-inference-service.yaml</code>. This configuration:
+* Deploys your model (supports Hugging Face, private registry, or S3 URIs).
+* Enables the <code>llm-d</code> runtime with intelligent routing.
+* Configures KV cache-aware scoring for optimal routing decisions.</p>
+</div>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: qwen-registry
+  namespace: my-llmd-deployment
+  annotations:
+    opendatahub.io/hardware-profile-name: gpu-profile
+    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
+    opendatahub.io/model-type: generative
+    openshift.io/display-name: Qwen from Registry
+    security.opendatahub.io/enable-auth: 'false'
+spec:
+  replicas: 1
+  model:
+    # Model URI - supports Hugging Face, private registry, or S3
+    # Examples: hf://Qwen/Qwen3-0.6B, s3://your-bucket/model-path, oci://registry/model
+    uri: hf://Qwen/Qwen3-0.6B
+    name: Qwen/Qwen3-0.6B
+  router:
+    scheduler:
+      template:
+        containers:
+          - name: main
+            env:
+              - name: TOKENIZER_CACHE_DIR
+                value: /tmp/tokenizer-cache
+              - name: HF_HOME
+                value: /tmp/tokenizer-cache
+              - name: TRANSFORMERS_CACHE
+                value: /tmp/tokenizer-cache
+              - name: XDG_CACHE_HOME
+                value: /tmp
+            args:
+              - --pool-group
+              - inference.networking.x-k8s.io
+              - '--pool-name'
+              - '{{ ChildName .ObjectMeta.Name `-inference-pool` }}'
+              - '--pool-namespace'
+              - '{{ .ObjectMeta.Namespace }}'
+              - '--zap-encoder'
+              - json
+              - '--grpc-port'
+              - '9002'
+              - '--grpc-health-port'
+              - '9003'
+              - '--secure-serving'
+              - '--model-server-metrics-scheme'
+              - https
+              - '--config-text'
+              - |
+                apiVersion: inference.networking.x-k8s.io/v1alpha1
+                kind: EndpointPickerConfig
+                plugins:
+                - type: single-profile-handler
+                - type: queue-scorer
+                - type: kv-cache-utilization-scorer
+                - type: prefix-cache-scorer
+                schedulingProfiles:
+                - name: default
+                  plugins:
+                  - pluginRef: queue-scorer
+                    weight: 2
+                  - pluginRef: kv-cache-utilization-scorer
+                    weight: 2
+                  - pluginRef: prefix-cache-scorer
+                    weight: 3
+            volumeMounts:
+              - name: tokenizer-cache
+                mountPath: /tmp/tokenizer-cache
+              - name: cachi2-cache
+                mountPath: /cachi2
+        volumes:
+          - name: tokenizer-cache
+            emptyDir: {}
+          - name: cachi2-cache
+            emptyDir: {}
+    route: { }
+    gateway: { }
+  template:
+    tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+    containers:
+      - name: main
+        env:
+          - name: VLLM_ADDITIONAL_ARGS
+            value: "--disable-uvicorn-access-log --max-model-len=16000"
+        resources:
+          limits:
+            cpu: '1'
+            memory: 8Gi
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: '1'
+            memory: 8Gi
+            nvidia.com/gpu: "1"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTPS
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 30
+          failureThreshold: 5</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">Key Configuration: Intelligent Routing</div>
+<div class="paragraph">
+<p>The <code>scheduler</code> section configures the intelligent routing behavior:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong><code>kv-cache-utilization-scorer</code>:</strong> Routes requests to pods that already hold the relevant KV Cache (cache hits).</p>
+</li>
+<li>
+<p><strong><code>prefix-cache-scorer</code>:</strong> Routes requests based on prompt prefix matching, enabling even more efficient cache reuse.</p>
+</li>
+<li>
+<p><strong><code>queue-scorer</code>:</strong> Balances load by considering pod queue depth.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The weights (2, 2, 3) determine the relative importance of each scoring factor. Higher weight on <code>prefix-cache-scorer</code> prioritizes cache affinity.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Apply the Deployment:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f llm-inference-service.yaml</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p><strong>Monitor the Deployment:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get llminferenceservice -n my-llmd-deployment -w</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wait for the status to show <strong>Ready</strong>. This may take several minutes as the model images are pulled and the pods initialize.</p>
+</div>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">Status Check</div>
+<div class="paragraph">
+<p>The status may briefly show <strong>Failed</strong> in the dashboard while images pull.
+Check the pods: <code>oc get pods -n my-llmd-deployment</code>
+Wait for the <code>model</code> and <code>inference</code> pods to be <code>Running</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_3_verify_the_intelligent_routing_components"><a class="anchor" href="#_2_3_verify_the_intelligent_routing_components"></a>2.3 Verify the Intelligent Routing Components</h3>
+<div class="paragraph">
+<p>Once the deployment is ready, verify that the intelligent routing components are running:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Check the Inference Scheduler:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pods -n my-llmd-deployment -l component=inference-scheduler</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Expected Output:</strong> You should see a pod named something like <code>qwen-registry-inference-scheduler-xxx</code> in <code>Running</code> status.</p>
+</div>
+</li>
+<li>
+<p><strong>Check the vLLM Worker Pods:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pods -n my-llmd-deployment -l component=vllm-worker</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Expected Output:</strong> You should see vLLM worker pods in <code>Running</code> status.</p>
+</div>
+</li>
+<li>
+<p><strong>Check the HTTPRoute:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get httproute -n my-llmd-deployment</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Expected Output:</strong> You should see an HTTPRoute that points to the <code>openshift-ai-inference</code> gateway.</p>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_3_expose_and_test_the_service"><a class="anchor" href="#_step_3_expose_and_test_the_service"></a>Step 3: Expose and Test the Service</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Now that your model is deployed with intelligent routing, you need to expose it and verify that routing decisions are being made correctly.</p>
+</div>
+<div class="sect2">
+<h3 id="_3_1_get_the_inference_url"><a class="anchor" href="#_3_1_get_the_inference_url"></a>3.1 Get the Inference URL</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Retrieve the Gateway Address:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export INFERENCE_URL=$(oc get gateway openshift-ai-inference -n openshift-ingress -o jsonpath='{.status.addresses[0].value}')
+echo "Inference Endpoint: http://$INFERENCE_URL/my-llmd-deployment/qwen-registry/v1"</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_3_2_test_intelligent_routing_cache_hit_verification"><a class="anchor" href="#_3_2_test_intelligent_routing_cache_hit_verification"></a>3.2 Test Intelligent Routing (Cache Hit Verification)</h3>
+<div class="paragraph">
+<p>We will prove that the scheduler is routing based on cache affinity by sending two requests: one "cold" (cache miss) and one "warm" (cache hit).</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Step 1: The "Cold" Request (Baseline)</strong></p>
+<div class="paragraph">
+<p>Send a request with a unique system prompt. This will be a cache miss, requiring full Prefill computation.</p>
+</div>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">time curl -k -X POST "http://$INFERENCE_URL/my-llmd-deployment/qwen-registry/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-0.6B",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant talking about OpenShift AI."},
+      {"role": "user", "content": "Explain Kubernetes in 50 words."}
+    ]
+  }'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+<strong>Note the <code>real</code> time from the output. This is your baseline (cache miss).</strong></p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Step 2: The "Warm" Request (Cache Hit)</strong></p>
+<div class="paragraph">
+<p>Send the <strong>exact same</strong> request immediately. The scheduler should recognize the prefix hash and route to the same pod, resulting in a cache hit.</p>
+</div>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Run the exact same command again
+time curl -k -X POST "http://$INFERENCE_URL/my-llmd-deployment/qwen-registry/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-0.6B",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant talking about OpenShift AI."},
+      {"role": "user", "content": "Explain Kubernetes in 50 words."}
+    ]
+  }'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+
+<strong>Compare the <code>real</code> time. The second request should be significantly faster (lower TTFT) due to the cache hit.</strong></p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">Understanding the Results</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>First Request (Cold):</strong> Requires Prefill computation. Higher latency, higher GPU usage.</p>
+</li>
+<li>
+<p><strong>Second Request (Warm):</strong> Cache hit. Lower latency, lower GPU usage (only Decode phase).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>This demonstrates the value of intelligent routing: you are avoiding expensive recomputation by routing to pods that already hold the context.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_4_observability_verify_intelligent_routing"><a class="anchor" href="#_step_4_observability_verify_intelligent_routing"></a>Step 4: Observability - Verify Intelligent Routing</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Validate your deployment using the OpenShift AI Dashboard metrics.</p>
+</div>
+<div class="sect2">
+<h3 id="_4_1_access_the_metrics"><a class="anchor" href="#_4_1_access_the_metrics"></a>4.1 Access the Metrics</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Navigate to <strong>OpenShift Console</strong> → <strong>Observe</strong> → <strong>Dashboards</strong>.</p>
+</li>
+<li>
+<p>Look for:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Networking/Ingress Dashboard:</strong> Shows request routing patterns.</p>
+</li>
+<li>
+<p><strong>Prometheus Dashboard:</strong> Shows custom metrics from <code>llm-d</code>.</p>
+</li>
+<li>
+<p><strong>NVIDIA DCGM Exporter Dashboard:</strong> Shows GPU utilization.</p>
+</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_4_2_key_metrics_to_monitor"><a class="anchor" href="#_4_2_key_metrics_to_monitor"></a>4.2 Key Metrics to Monitor</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 40%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top"><strong>Business Goal</strong></th>
+<th class="tableblock halign-left valign-top"><strong>Prometheus Metric</strong></th>
+<th class="tableblock halign-left valign-top"><strong>What to Look For</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Prove Intelligent Routing</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vllm_llmd_kv_cache_hit_rate</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Your #1 ROI Metric.</strong> After sending multiple requests, this should show cache hits (values &gt; 0). A 90% hit rate means you are skipping expensive Prefill compute 90% of the time.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Prove Responsiveness</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vllm_llmd_time_to_first_token_seconds</code> (TTFT)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The primary measure of perceived speed. Cache hits should show lower TTFT than cache misses.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Prove Throughput</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vllm_llmd_time_per_output_token_seconds</code> (TPOT)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The "generation speed" metric. Should remain consistent regardless of cache state.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Prove Efficiency</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>vllm_llmd_gpu_utilization_seconds</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Confirms expensive GPUs are active and not idling. Should be high during active inference.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_mission_accomplished"><a class="anchor" href="#_mission_accomplished"></a>Mission Accomplished</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You have successfully deployed a model from your private registry using <strong>Distributed Inference with <code>llm-d</code></strong>. Your deployment now benefits from:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Intelligent Routing:</strong> Requests are routed to pods based on cache affinity and load.</p>
+</li>
+<li>
+<p><strong>KV Cache Off-Loading:</strong> Cache hits avoid expensive Prefill computation, reducing latency and cost.</p>
+</li>
+<li>
+<p><strong>Resource Optimization:</strong> Every GPU cycle is used efficiently, maximizing ROI.</p>
+</li>
+</ul>
+</div>
+<hr>
+<div class="paragraph">
+<p><strong>Your model is now running intelligently. Next, let&#8217;s ensure you can troubleshoot and maintain this deployment.</strong></p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="section1.html">Architecture Deep Dive</a></span>
+  <span class="next"><a href="section3.html">Troubleshooting</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
