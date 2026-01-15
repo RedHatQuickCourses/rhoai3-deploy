@@ -1,27 +1,8 @@
-= An Example Quick Course
+= Deploying Models with Intelligent Routing
 :navtitle: Home
+:toc: macro
 
-== Introduction
+// This page includes the chapter1 content to serve as the homepage
+// The ROOT module is used for the component index page
 
-Course Title: Course title FIXME
-
-Description:
-Course description FIXME
-
-Duration: FIXME hours
-
-== Objectives
-
-On completing this course, you should be able to:
-
-* Observable, measurable objective...
-* Observable, measurable objective...
-* Observable, measurable objective...
-
-== Prerequisites
-
-This course assumes that you have the following prior experience:
-
-* Course or experience...
-* Course or experience...
-* Course or experience...
+include::chapter1:index.adoc[]
