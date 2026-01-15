@@ -1,327 +1,133 @@
-# Intelligent Model Deployment with llm-d
-**Maximize GPU ROI Through Intelligent Routing**
 
-> **The Problem:** Standard model deployments waste GPU cycles, recomputing context and routing requests randomly.  
-> **The Solution:** Distributed Inference with `llm-d` provides intelligent, cache-aware routing that maximizes GPU utilization and reduces latency.
+# Enterprise Model Serving with OpenShift AI
+**From "Shadow AI" to Governed, Tuned, and Automated Inference**
 
-This repository contains a complete **"Course-in-a-Box"** that teaches you how to deploy models using **Distributed Inference with `llm-d`** on Red Hat OpenShift AI 3.0, enabling intelligent routing and KV cache off-loading for all model deployments.
+> **The Problem:** Deploying LLMs is not like deploying microservices. Default configurations lead to Out-Of-Memory (OOM) crashes, wasted GPU funds, and unpredictable latency.  
+> **The Solution:** A structured engineering approach to **Selection**, **Sizing**, **Tuning**, and **Automation** using vLLM and Red Hat OpenShift AI.
+
+This repository contains the complete **"Enterprise Serving"** learning path. It guides Platform Engineers from the basics of GPU architecture to a production-ready, GitOps-based deployment of the **IBM Granite-3.3-2B** model.
 
 ---
 
-## 📚 Option 1: View the Full Course (Antora)
+## ⚡ Quick Start: The "Fast Track"
 
-This repository is structured as an Antora documentation site. To view the full learning experience with diagrams, architecture deep-dives, and troubleshooting guides:
+If you are an experienced Engineer and simply want to see the **vLLM Serving Automation** in action (skipping the theory), follow these steps to deploy a tuned Granite model immediately.
 
-### Using Docker (Recommended)
+### 1. Prerequisites
+* **Cluster:** Red Hat OpenShift AI 3.0 installed.
+* **Hardware:** At least 1 Node with an NVIDIA GPU (T4, A10G, or L4).
+* **CLI:** `oc` logged in with `cluster-admin` privileges.
+
+### 2. Setup the Environment
+(Optional) If you do not have an S3 bucket or Data Connection, run this script to deploy MinIO and download the model automatically.
+
 ```bash
+chmod +x deploy/fast_track_serving.sh
+./deploy/fast_track_serving.sh
+3. Deploy the Model (GitOps)
+Run the automated deployment script. This creates the ServingRuntime (Engine) and InferenceService (Workload) with specific tuning parameters (max-model-len=8192) to prevent crashes.
+
+Bash
+
+chmod +x deploy/serve_model.sh
+./deploy/serve_model.sh
+4. Verify
+Once the script reports ✅ SUCCESS, test the API:
+
+Bash
+
+# Get the URL
+export URL=$(oc get inferenceservice granite-2b-server -n rhoai-model-registry-lab -o jsonpath='{.status.url}')
+
+# Test Inference
+curl -k $URL/v1/completions \
+  -H 'Content-Type: application/json' \
+  -d '{ "model": "granite-2b-server", "prompt": "Define MLOps.", "max_tokens": 50 }'
+📚 The Full Course (Antora)
+This repository is structured as a self-paced course. To view the full learning experience—including GPU sizing math, architecture diagrams, and vLLM deep-dives—build the documentation site.
+
+Using Docker (Recommended)
+Bash
+
 docker run -u $(id -u) -v $PWD:/antora:Z --rm -t antora/antora antora-playbook.yml
 # Open the generated site:
 # open build/site/index.html
-```
+Using Local NPM
+Bash
 
-### Using Local NPM
-
-```bash
 npm install
 npx antora antora-playbook.yml
-# Open build/site/index.html
-```
+📖 Course Modules
+Module 1: Strategy & Selection
+The Enterprise Reality: Moving beyond leaderboard hype.
 
----
+Validated Patterns: Using the Red Hat AI Validated Model Repository to de-risk deployment.
 
-## ⚡ Option 2: The Fast Track (Deployment Guide)
+Model Selection: Why we chose Granite-3.3-2B (Apache 2.0, Transparent, Efficient).
 
-If you are an experienced Platform Engineer and just want to deploy a model with `llm-d` **now**, follow these steps.
+Module 2: Hardware Architecture & Sizing
+GPU Generations: When to use Ampere (A10G) vs. Hopper (H100).
 
-### Prerequisites
+The Math: How to calculate VRAM requirements using the formula:
 
-* **Cluster:** OpenShift AI 3.0 installed (OpenShift 4.19+).
-* **Access:** `cluster-admin` privileges (required to configure Gateway API).
-* **CLI:** `oc` installed locally.
-* **Model:** A model ready to deploy (from Hugging Face, private registry, or S3).
+Total VRAM = (Model Weights * 1.2) + KV Cache.
 
-### Step 1: Verify Gateway API Support
+The Trap: Why a model fits when idle but crashes under load.
 
-The Gateway API is required for intelligent routing. OpenShift AI 3.0 includes Gateway API support.
+Module 3: The Engine (vLLM)
+Concepts: Understanding PagedAttention and efficient memory management.
 
-```bash
-# Check Gateway API CRDs
-oc get crd | grep gateway
-```
+Tuning Guide:
 
-*Expected Output:* You should see `httproutes.gateway.networking.k8s.io` and related CRDs.
+--max-model-len: The "Safety Valve" for context windows.
 
-[NOTE]
-.If Gateway API is Not Available
-====
-If you do not see Gateway API CRDs, you may need to install OpenShift Service Mesh or kGateway. Consult your cluster administrator or the OpenShift AI 3.0 documentation.
-====
+--gpu-memory-utilization: Optimizing for throughput.
 
-### Step 2: Install LeaderWorkerSet Operator (Multi-Node & MoE Only)
+--tensor-parallel-size: Sharding large models across GPUs.
 
-[IMPORTANT]
-.When You Need LeaderWorkerSet
-====
-The LeaderWorkerSet Operator is **only required** for:
-* **Multi-node deployments:** When your model requires sharding across multiple nodes.
-* **Mixture-of-Experts (MoE) models:** When deploying MoE models with expert parallelism.
+Module 4: Automated Deployment
+Infrastructure-as-Code: Abandoning "Click-Ops" for reproducible scripts.
 
-For **single-node deployments** (most common), you can **skip this step**.
-====
+The Lab: Executing serve_model.sh to deploy the tuned stack.
 
-If deploying multi-node or MoE models:
+📂 Repository Structure
+Plaintext
 
-```bash
-# Install via OpenShift Console:
-# 1. Navigate to Operators → OperatorHub
-# 2. Search for "Leader Worker Set"
-# 3. Click Install and accept defaults
-
-# Verify installation
-oc get csv -n openshift-operators | grep leader-worker-set
-```
-
-### Step 3: Create the Project
-
-```bash
-oc new-project my-llmd-deployment
-```
-
-### Step 4: Deploy Model with llm-d
-
-Create the `LLMInferenceService` YAML file:
-
-```yaml
-apiVersion: serving.kserve.io/v1alpha1
-kind: LLMInferenceService
-metadata:
-  name: qwen-model
-  namespace: my-llmd-deployment
-  annotations:
-    opendatahub.io/hardware-profile-name: gpu-profile
-    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
-    opendatahub.io/model-type: generative
-    openshift.io/display-name: Qwen Model
-    security.opendatahub.io/enable-auth: 'false'
-spec:
-  replicas: 1
-  model:
-    # Model URI - supports Hugging Face, private registry, or S3
-    uri: hf://Qwen/Qwen3-0.6B
-    name: Qwen/Qwen3-0.6B
-  router:
-    scheduler:
-      template:
-        containers:
-          - name: main
-            env:
-              - name: TOKENIZER_CACHE_DIR
-                value: /tmp/tokenizer-cache
-              - name: HF_HOME
-                value: /tmp/tokenizer-cache
-              - name: TRANSFORMERS_CACHE
-                value: /tmp/tokenizer-cache
-              - name: XDG_CACHE_HOME
-                value: /tmp
-            args:
-              - --pool-group
-              - inference.networking.x-k8s.io
-              - '--pool-name'
-              - '{{ ChildName .ObjectMeta.Name `-inference-pool` }}'
-              - '--pool-namespace'
-              - '{{ .ObjectMeta.Namespace }}'
-              - '--zap-encoder'
-              - json
-              - '--grpc-port'
-              - '9002'
-              - '--grpc-health-port'
-              - '9003'
-              - '--secure-serving'
-              - '--model-server-metrics-scheme'
-              - https
-              - '--config-text'
-              - |
-                apiVersion: inference.networking.x-k8s.io/v1alpha1
-                kind: EndpointPickerConfig
-                plugins:
-                - type: single-profile-handler
-                - type: queue-scorer
-                - type: kv-cache-utilization-scorer
-                - type: prefix-cache-scorer
-                schedulingProfiles:
-                - name: default
-                  plugins:
-                  - pluginRef: queue-scorer
-                    weight: 2
-                  - pluginRef: kv-cache-utilization-scorer
-                    weight: 2
-                  - pluginRef: prefix-cache-scorer
-                    weight: 3
-            volumeMounts:
-              - name: tokenizer-cache
-                mountPath: /tmp/tokenizer-cache
-              - name: cachi2-cache
-                mountPath: /cachi2
-        volumes:
-          - name: tokenizer-cache
-            emptyDir: {}
-          - name: cachi2-cache
-            emptyDir: {}
-    route: { }
-    gateway: { }
-  template:
-    tolerations:
-      - key: "nvidia.com/gpu"
-        operator: "Exists"
-        effect: "NoSchedule"
-    containers:
-      - name: main
-        env:
-          - name: VLLM_ADDITIONAL_ARGS
-            value: "--disable-uvicorn-access-log --max-model-len=16000"
-        resources:
-          limits:
-            cpu: '1'
-            memory: 8Gi
-            nvidia.com/gpu: "1"
-          requests:
-            cpu: '1'
-            memory: 8Gi
-            nvidia.com/gpu: "1"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-            scheme: HTTPS
-          initialDelaySeconds: 120
-          periodSeconds: 30
-          timeoutSeconds: 30
-          failureThreshold: 5
-```
-
-Apply the deployment:
-
-```bash
-oc apply -f llm-inference-service.yaml
-```
-
-Monitor the deployment:
-
-```bash
-oc get llminferenceservice -n my-llmd-deployment -w
-```
-
-Wait for status to show **Ready** (may take several minutes).
-
-### Step 5: Get the Inference URL
-
-```bash
-export INFERENCE_URL=$(oc get gateway openshift-ai-inference -n openshift-ingress -o jsonpath='{.status.addresses[0].value}')
-echo "Inference Endpoint: http://$INFERENCE_URL/my-llmd-deployment/qwen-model/v1"
-```
-
-### Step 6: Test Intelligent Routing
-
-Send a test request:
-
-```bash
-curl -k -X POST "http://$INFERENCE_URL/my-llmd-deployment/qwen-model/v1/chat/completions" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen/Qwen3-0.6B",
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "Explain Kubernetes in 50 words."}
-    ]
-  }'
-```
-
-Send the same request again to verify cache hit (should be faster):
-
-```bash
-# Run the same command again
-# Compare response times - second request should be faster due to cache hit
-```
-
-### Step 7: Verify Intelligent Routing
-
-Check the pods to verify intelligent routing components:
-
-```bash
-# Check Inference Scheduler
-oc get pods -n my-llmd-deployment -l component=inference-scheduler
-
-# Check vLLM Worker Pods
-oc get pods -n my-llmd-deployment -l component=vllm-worker
-
-# Check HTTPRoute
-oc get httproute -n my-llmd-deployment
-```
-
-Monitor metrics in OpenShift Console → **Observe** → **Dashboards**:
-* Look for `vllm_llmd_kv_cache_hit_rate` (should be > 0 after multiple requests)
-* Monitor `vllm_llmd_time_to_first_token_seconds` (TTFT should be lower for cache hits)
-
----
-
-## 📂 Repository Structure
-
-```text
 /
-├── modules/                  # Antora Course Source (Adoc files)
-│   └── chapter1/pages/      # The actual learning content
-│       ├── index.adoc       # Introduction & Value
-│       ├── section1.adoc   # Architecture Deep Dive
-│       ├── section2.adoc   # The Deployment Lab
-│       └── section3.adoc   # Troubleshooting
+├── deploy/                   # Automation Scripts
+│   ├── fast_track_serving.sh # Lab Setup (MinIO + Model Download)
+│   └── serve_model.sh        # The Deployment Logic (vLLM + KServe)
 │
-└── antora-playbook.yml      # Antora Build Configuration
-```
+├── docs/                     # Course Content (AsciiDoc)
+│   └── modules/ROOT/pages/
+│       ├── index.adoc        # Introduction
+│       ├── hardware-sizing.adoc
+│       ├── vllm-tuning.adoc
+│       └── automated-deployment.adoc
+│
+└── antora-playbook.yml       # Documentation Build Config
+🛠 Troubleshooting
+OOMKilled (Exit Code 137):
 
-## 🛠 Troubleshooting
+Cause: The model + KV Cache exceeded GPU VRAM.
 
-* **Scheduler Not Routing?** Check `oc logs -n <namespace> -l component=inference-scheduler` for errors.
-* **Pods Not Starting?** Verify GPU availability: `oc describe node | grep nvidia.com/gpu`
-* **Cache Hits Not Occurring?** Verify scheduler configuration includes `kv-cache-utilization-scorer` plugin.
-* **Model Not Loading?** Check model URI format and storage access.
+Fix: Edit deploy/serve_model.sh and lower CONTEXT_LIMIT (e.g., from 8192 to 4096).
 
-For detailed troubleshooting, see the full course content or `modules/chapter1/pages/section3.adoc`.
+Pod Stuck in Pending:
 
----
+Cause: No GPU nodes available or quotas exceeded.
 
-## 🎯 Key Concepts
+Fix: Check oc describe pod <pod-name> for scheduling errors.
 
-### Intelligent Routing
-`llm-d` routes requests to pods based on:
-* **KV Cache Affinity:** Routes to pods that already hold the conversation context (cache hits).
-* **Queue Depth:** Balances load across pods.
-* **Prefix Matching:** Routes based on prompt prefix for even more efficient cache reuse.
+Timeout Waiting for Model:
 
-### KV Cache Off-Loading
-The KV Cache stores conversation context in GPU memory. `llm-d` manages this cache intelligently:
-* **Cache Hits:** Avoid expensive Prefill computation, reducing latency and cost.
-* **Cache Management:** Automatically tracks cache locations and evicts least-recently-used caches.
+Cause: Downloading the model/image took longer than the script's loop.
 
-### Benefits for All Deployments
-Whether you deploy from your private registry, the public catalog, or Hugging Face, `llm-d` provides intelligent routing and cache management that maximizes GPU ROI.
+Fix: Check logs: oc logs -f -l serving.kserve.io/inferenceservice=granite-2b-server -c kserve-container.
 
----
+🔗 Next Steps
+Once you have mastered single-model serving, you are ready for the advanced modules (Coming Soon):
 
-## 📖 Course Content Overview
+Quantization Lab: Compressing Granite to INT8 using InstructLab.
 
-This course covers:
-
-1. **Introduction & Value:** Understanding the business value of intelligent model deployment.
-2. **Architecture Deep Dive:** Technical architecture of `llm-d`, intelligent routing, and KV cache management.
-3. **The Deployment Lab:** Step-by-step guide to deploying models with `llm-d`.
-4. **Troubleshooting:** SRE playbook for debugging and optimizing deployments.
-
----
-
-## 🔗 Related Courses
-
-This course is part of a learning path that includes:
-* **Model Registry Course:** Learn to govern and manage AI assets in a private registry.
-* **Model Deployment Course (This Course):** Learn to deploy models with intelligent routing.
-
-Each course is standalone but designed to work together as a complete AI Factory curriculum.
+Distributed Inference: Using llm-d for intelligent routing across multiple replicas.
