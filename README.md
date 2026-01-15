@@ -24,20 +24,24 @@ If you are an experienced Engineer and simply want to see the **vLLM Serving Aut
 ```bash
 chmod +x deploy/fast_track_serving.sh
 ./deploy/fast_track_serving.sh
+```
+
 3. Deploy the Model (GitOps)
 Run the automated deployment script. This creates the ServingRuntime (Engine) and InferenceService (Workload) with specific tuning parameters (max-model-len=8192) to prevent crashes.
 
-Bash
-
+```bash
 chmod +x deploy/serve_model.sh
 ./deploy/serve_model.sh
+```
+
 4. Verify
 Once the script reports ✅ SUCCESS, test the API:
 
-Bash
+```bash
 
 # Get the URL
 export URL=$(oc get inferenceservice granite-2b-server -n rhoai-model-registry-lab -o jsonpath='{.status.url}')
+
 
 # Test Inference
 curl -k $URL/v1/completions \
@@ -45,18 +49,23 @@ curl -k $URL/v1/completions \
   -d '{ "model": "granite-2b-server", "prompt": "Define MLOps.", "max_tokens": 50 }'
 📚 The Full Course (Antora)
 This repository is structured as a self-paced course. To view the full learning experience—including GPU sizing math, architecture diagrams, and vLLM deep-dives—build the documentation site.
+```
+
 
 Using Docker (Recommended)
-Bash
 
 docker run -u $(id -u) -v $PWD:/antora:Z --rm -t antora/antora antora-playbook.yml
 # Open the generated site:
 # open build/site/index.html
+
+
 Using Local NPM
-Bash
+```bash
 
 npm install
 npx antora antora-playbook.yml
+```
+
 📖 Course Modules
 Module 1: Strategy & Selection
 The Enterprise Reality: Moving beyond leaderboard hype.
@@ -106,6 +115,8 @@ Plaintext
 │       └── automated-deployment.adoc
 │
 └── antora-playbook.yml       # Documentation Build Config
+
+
 🛠 Troubleshooting
 OOMKilled (Exit Code 137):
 
