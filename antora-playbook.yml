@@ -1,5 +1,5 @@
 site:
-  title: Intelligent Model Deployment with llm-d
+  title: Red Hat OpenShift AI (RHOAI) Enterprise Model Serving
   start_page: rhoai3-deploy::index.adoc
 
 content:

@@ -1,12 +1,8 @@
-= An Example Break-fix course
+= Making RHOAI Model Inference Work for You
 :navtitle: Home
+:toc: macro
 
-== Introduction
+// This page includes the chapter1 content to serve as the homepage
+// The ROOT module is used for the component index page
 
-TITLE1: Red Hat Enterprise Linux 9 (FIXME product)
-
-TITLE2: Break-fix Practice 1 (FIXME title)
-
-Description:
-This break-fix training simulates a problem FIXME . You'll investigate and solve the problem in a hands-on lab environment to complete the training.
-
+include::chapter1:intro.adoc[]
