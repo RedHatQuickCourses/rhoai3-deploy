@@ -1,0 +1,97 @@
+= Tuning the Engine: Arguments
+:navtitle: vLLM Tuning
+:toc: macro
+
+// Antora metadata
+:page-role: Platform Engineer
+:description: Optimizing vLLM arguments for stability and performance (max-model-len, tensor-parallel-size).
+
+[.lead]
+*Default settings are for tourists. Engineers tune their engines.*
+
+In Module 2, we calculated that a Granite-8B model needs ~19GB of weights and ~20GB of KV Cache (at full 128k context).
+If you deploy this on an NVIDIA A10G (24GB) using default settings, **it will crash**.
+
+Why? Because vLLM defaults to utilizing 90% of the GPU and attempts to reserve space for the model's *maximum possible context*.
+
+To make it fit, you must apply the **Safety Valve**.
+
+== 1. The Safety Valve: `--max-model-len`
+
+This is the most important argument for cost-effective serving. It hard-limits the context window.
+
+* **The Default:** The model's config (e.g., 128,000 tokens).
+* **The Fix:** Force it down to what your hardware can handle.
+* **Guidance:**
+    * **A10G (24GB):** Set to `8192` or `4096`.
+    * **H100 (80GB):** Can typically handle `32768` or higher.
+
+[source,yaml]
+----
+args:
+  - "--max-model-len=8192"  # Caps context to save VRAM
+----
+
+== 2. The Gas Pedal: `--gpu-memory-utilization`
+
+This controls how much VRAM vLLM is allowed to consume.
+
+ * **Default:** `0.9` (90%).
+ * **The Tuning:** On a dedicated Kubernetes node (where no other GPU processes run), you can safely bump this to `0.95`.
+ * **The Impact:** That extra 5% (~1.2GB on an A10G) creates room for dozens of additional concurrent user requests in the KV Cache.
+
+== 3. The Scaling Factor: `--tensor-parallel-size`
+
+When the **Static Weights** (from Module 2) exceed the VRAM of a single card, you must shard the model.
+
+ * **Rule:** The value must match the number of GPUs requested in your Kubernetes pod.
+ * **Example:** Deploying Llama-3-70B (~140GB) on 80GB A100s.
+    * 1 GPU (80GB) < 140GB -> **Crash.**
+    * 2 GPUs (160GB) > 140GB -> **Success.**
+
+[source,yaml]
+----
+resources:
+  limits:
+    nvidia.com/gpu: 2  # Request 2 Physical Cards
+args:
+  - "--tensor-parallel-size=2" # Tell vLLM to use both
+----
+
+== 4. Agentic Enabler: Tool Calling
+
+To use Granite as an "Agent" (a model that can use tools/functions), you must explicitly enable the parser.
+
+[source,yaml]
+----
+args:
+  - "--enable-auto-tool-choice"
+  - "--tool-call-parser=granite" # Specific to the Granite family
+----
+
+== Putting it Together: The ServingRuntime
+
+In OpenShift AI, we package these arguments into a **ServingRuntime** template.
+This allows you to define the "Tuned Engine" once and let Data Scientists reuse it.
+
+[source,yaml]
+----
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-tuned-granite
+spec:
+  containers:
+    - args:
+        - --port=8080
+        - --model=/mnt/models
+        - --served-model-name={{.Name}}
+        - --max-model-len=8192         # <--- The Tuning
+        - --gpu-memory-utilization=0.95 # <--- The Optimization
+      image: quay.io/modh/vllm:rhoai-3.0
+      resources:
+        requests:
+          nvidia.com/gpu: 1
+----
+
+xref:automated-deployment.adoc[Next: Automating Deployment]

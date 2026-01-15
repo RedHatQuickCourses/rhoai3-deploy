@@ -1,0 +1,149 @@
+= Lab: Deploying Models from S3
+:toc: macro
+
+// Antora metadata
+:page-role: MLOps Engineer
+:description: How to calculate GPU requirements and deploy models from object storage in RHOAI.
+
+[.lead]
+*A model on a hard drive is potential. A model in memory is value.*
+
+In Zone 2, we locked our model into the "Vault" (S3). Now, in **(Deploy)**, we need to load it into a GPU and expose it as an API.
+
+But before we click "Deploy," we must answer the most expensive question in AI:
+**"Will this actually fit?"**
+
+== Part 1: The Hardware Math (Sizing Guide)
+
+Deploying an LLM without calculating VRAM (Video RAM) usage is a recipe for `OOMKilled` (Out of Memory) errors. Platform Engineers must know how to estimate the "footprint" of a model.
+
+=== The Formula
+
+The memory required is not just the model size. It is a sum of three parts:
+
+[stem]
+++++
+Total VRAM = \text{Model Weights} + \text{KV Cache} + \text{Activation Overhead}
+++++
+
+==== 1. Model Weights (The Static Cost)
+This is the baseline cost just to load the file.
+* **FP16 (Half Precision):** 2 Bytes per parameter.
+* **FP32 (Full Precision):** 4 Bytes per parameter.
+* **Int8 (Quantized):** 1 Byte per parameter.
+
+.Rule of Thumb
+[cols="1,1,1"]
+|===
+| Model Size | Precision | Base VRAM Needed
+
+| **7 Billion (7B)**
+| FP16
+| ~14 GB
+
+| **7 Billion (7B)**
+| Int8
+| ~7 GB
+
+| **70 Billion (70B)**
+| FP16
+| ~140 GB (Requires Multi-GPU)
+|===
+
+==== 2. The KV Cache (The Dynamic Cost)
+This is the memory needed to store the "context" of the conversation. It grows linearly with the context length (token limit).
+* *Impact:* A 7B model might fit on a 16GB GPU with 2k context, but crash with 8k context.
+
+==== 3. Recommendation for this Lab
+We are deploying `Granite-7B-Instruct`.
+* **Calculation:** 7B params * 2 bytes (FP16) = **14GB**.
+* **Buffer:** +20% for KV Cache = **~17GB**.
+* **Target Hardware:** We need an **NVIDIA A10G (24GB)** or **L40S**. A T4 (16GB) will effectively struggle or OOM.
+
+---
+
+== Part 2: Deploying from S3 (The "Manual" Way)
+
+While the Model Catalog is great for governance, sometimes you just need to deploy a raw artifact from a bucket (e.g., a nightly training run).
+
+In RHOAI, we use **KServe** (Single Model Serving) for LLMs. This creates a dedicated Pod with its own GPU.
+
+=== Step 1: Create the Data Connection
+We need to tell the Serving Runtime where the files live.
+
+1.  Open your **Data Science Project**.
+2.  Navigate to **Data Connections** -> **Add Data Connection**.
+3.  **Name:** `my-private-models`
+4.  **Configuration:**
+    * **Access Key:** `minio` (from Lab 2)
+    * **Secret Key:** `minio123`
+    * **Endpoint:** `http://minio.rhoai-storage.svc:9000`
+    * **Bucket:** `models-secure`
+    * **Path:** `ibm-granite/granite-3.0-8b-instruct` (or your specific model path)
+
+=== Step 2: Configure the Runtime
+RHOAI provides pre-built runtimes. For LLMs, we use **vLLM** or **TGIS** (Text Generation Inference Server).
+
+1.  Navigate to **Models** -> **Deploy Model**.
+2.  **Serving Platform:** Select "Single-model serving platform".
+3.  **Project:** Select your current project.
+4.  **Serving Runtime:** Select **vLLM ServingRuntime** (Recommended for generic Hugging Face models) or **TGIS** (Optimized for Granite).
+
+=== Step 3: Define the Deployment
+1.  **Model Name:** `granite-s3-deploy`
+2.  **Model Framework:** `pytorch` (or leave auto-detect).
+3.  **Model Server Replicas:** `1`
+4.  **Compute Resources:**
+    * *Accelerator:* NVIDIA GPU.
+    * *Count:* `1`.
+5.  **Location:** Select **Existing Data Connection** -> `my-private-models`.
+6.  **Path:** Ensure the path points to the *folder* containing `config.json`, not the file itself.
+
+**Click "Deploy".**
+
+=== Step 4: Verification (The "Hello World")
+
+The deployment will take 2-5 minutes to pull the large image and load the weights into VRAM.
+Wait for the status to turn **Green**.
+
+**Test the API:**
+RHOAI exposes an OpenAI-compatible endpoint. You can query it using `curl`.
+
+[source,bash]
+----
+# Get the Route URL
+export INFERENCE_URL=$(oc get route granite-s3-deploy -o jsonpath='{.spec.host}')
+
+# Send a Prediction Request
+curl -k -X POST https://$INFERENCE_URL/v1/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "granite-s3-deploy",
+    "prompt": "Explain the concept of GPU quantization in one sentence.",
+    "max_tokens": 50,
+    "temperature": 0.1
+  }'
+----
+
+* **Success:** You receive a JSON response with generated text.
+* **Failure (503):** The model is still loading. Check the logs.
+
+=== Troubleshooting Cost & Memory
+
+[cols="1,3"]
+|===
+| Symptom | Solution
+
+| **OOMKilled** (Exit Code 137)
+| The model is too big for the GPU.
+*Fix:* Enable **Quantization**. In the ServingRuntime arguments, add `--quantization awq` (if using vLLM and an AWQ model).
+
+| **High Latency** (Slow Tokens)
+| The GPU is computing correctly but is overloaded.
+*Fix:* Check "Batch Size" settings or upgrade from A10G to A100.
+
+| **Cold Starts**
+| KServe scales to zero if unused. The first request takes 3 minutes.
+*Fix:* Set `minReplicas: 1` to keep it warm (Cost tradeoff).
+|===
+

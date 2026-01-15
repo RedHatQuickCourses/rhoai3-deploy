@@ -1,0 +1,215 @@
+= Troubleshooting & Day 2 Operations
+:navtitle: Troubleshooting
+:toc: macro
+
+// Antora metadata
+:page-role: troubleshooting-guide
+:description: How to debug common llm-d deployment issues and maintain intelligent routing services.
+
+[.lead]
+*Intelligent systems require intelligent debugging. You need to know how to verify that routing is working correctly.*
+
+Even with intelligent routing, deployments can encounter issues. The scheduler might not be routing correctly, pods might fail to start, or cache hits might not be occurring as expected.
+
+This section equips you with the **SRE (Site Reliability Engineering) Playbook** for `llm-d` deployments.
+
+== 1. Debugging the "Traffic Controller" (Inference Scheduler)
+
+If requests are not being routed intelligently, or if you see errors in the Gateway logs, start here.
+
+=== Check 1: Is the Scheduler Running?
+
+[source,bash]
+----
+oc get pods -n <your-namespace> -l component=inference-scheduler
+----
++
+* *Status `CrashLoopBackOff`:* Usually means the scheduler cannot connect to the Gateway API or the pool configuration is invalid.
+* *Status `ImagePullBackOff`:* Check your cluster's internet connectivity or image registry credentials.
+
+=== Check 2: The Scheduler Logs
+
+[source,bash]
+----
+oc logs -n <your-namespace> -l component=inference-scheduler --tail=100
+----
++
+* **Look for:**
+  * `Failed to connect to pool`: The scheduler cannot find the inference pool. Verify the `pool-name` and `pool-namespace` in your `LLMInferenceService`.
+  * `No healthy endpoints`: The scheduler cannot find any healthy vLLM pods. Check the worker pod status.
+  * `Cache hit` or `Cache miss`: These messages confirm that cache-aware routing is working.
+
+=== Check 3: Verify Pool Configuration
+
+The scheduler connects to an "inference pool" that groups your vLLM pods. Verify this pool exists:
+
+[source,bash]
+----
+oc get inferencepool -n <your-namespace>
+----
++
+* **Expected:** You should see a pool with a name matching your `LLMInferenceService` (e.g., `qwen-registry-inference-pool`).
+
+== 2. Debugging the "Workers" (vLLM Pods)
+
+If the scheduler is running but requests are failing, check the worker pods.
+
+=== Check 1: Are the Pods Running?
+
+[source,bash]
+----
+oc get pods -n <your-namespace> -l component=vllm-worker
+----
++
+* *Status `CrashLoopBackOff`:* Usually means the model failed to load or GPU resources are unavailable.
+* *Status `Pending`:* Usually means no GPU nodes are available or resource quotas are exceeded.
+
+=== Check 2: The Worker Logs
+
+[source,bash]
+----
+oc logs -n <your-namespace> -l component=vllm-worker --tail=100
+----
++
+* **Look for:**
+  * `CUDA out of memory`: The model is too large for the available GPU memory. Reduce `max-model-len` or use a smaller model.
+  * `Failed to load model`: The model URI is invalid or inaccessible. Verify the `model.uri` in your `LLMInferenceService`.
+  * `KV cache initialized`: Confirms that cache management is active.
+
+=== Check 3: GPU Availability
+
+Verify that GPUs are available and allocated:
+
+[source,bash]
+----
+oc describe node | grep -A 5 "nvidia.com/gpu"
+----
++
+* **Expected:** You should see GPU resources available on worker nodes.
+
+[source,bash]
+----
+oc get pods -n <your-namespace> -l component=vllm-worker -o jsonpath='{.items[*].spec.containers[*].resources.limits.nvidia\.com/gpu}'
+----
++
+* **Expected:** Each pod should have `1` GPU allocated.
+
+== 3. Debugging Intelligent Routing (Cache Hits Not Occurring)
+
+If your deployment is running but cache hits are not occurring (routing is not intelligent), verify the routing configuration.
+
+=== Check 1: Verify Scheduler Configuration
+
+The scheduler must have the cache-aware plugins enabled. Check your `LLMInferenceService`:
+
+[source,bash]
+----
+oc get llminferenceservice <your-service-name> -n <your-namespace> -o yaml | grep -A 20 "scheduler:"
+----
++
+* **Look for:**
+  * `kv-cache-utilization-scorer`: Must be present in the `plugins` list.
+  * `prefix-cache-scorer`: Must be present in the `plugins` list.
+  * `schedulingProfiles`: Must include these plugins with appropriate weights.
+
+=== Check 2: Monitor Cache Hit Rate
+
+Use Prometheus to check if cache hits are occurring:
+
+[source,bash]
+----
+# Query the cache hit rate metric
+oc exec -n openshift-monitoring -c prometheus prometheus-k8s-0 -- \
+  promtool query instant 'vllm_llmd_kv_cache_hit_rate' --time=$(date +%s)
+----
++
+* **Expected:** After sending multiple requests with the same prompt, this value should be > 0 (indicating cache hits).
+
+=== Check 3: Verify Gateway Integration
+
+The Gateway must be able to query the scheduler. Check the HTTPRoute:
+
+[source,bash]
+----
+oc get httproute -n <your-namespace> -o yaml
+----
++
+* **Look for:**
+  * `parentRefs`: Should reference the `openshift-ai-inference` gateway.
+  * `backendRefs`: Should point to your inference service.
+
+== 4. Debugging Model Loading
+
+If your model fails to load, verify the model URI and storage access.
+
+=== Check 1: Verify Model URI
+
+The `model.uri` in your `LLMInferenceService` must use the correct format:
+
+[source,bash]
+----
+oc get llminferenceservice <your-service-name> -n <your-namespace> -o jsonpath='{.spec.model.uri}'
+----
++
+* **For Hugging Face:** Should be `hf://<model-name>` (e.g., `hf://Qwen/Qwen3-0.6B`).
+* **For Private S3:** Should be `s3://<bucket>/<path>`.
+* **For OCI Registry:** Should be `oci://<registry>/<image>`.
+
+=== Check 2: Verify Storage Access
+
+If using private S3 storage, verify that the pods can access it:
+
+[source,bash]
+----
+# Exec into a worker pod and test S3 connectivity
+oc rsh -n <your-namespace> <vllm-worker-pod-name> curl -v <your-s3-endpoint>
+----
++
+* **Expected:** Should return a successful connection (may require authentication).
+
+=== Check 3: Verify Model Availability
+
+For Hugging Face models, verify the model name is correct. For private storage, verify the path exists and is accessible:
+
+[source,bash]
+----
+# Test Hugging Face model access (from a pod with internet access)
+curl -I https://huggingface.co/Qwen/Qwen3-0.6B
+----
+
+== 5. Performance Optimization
+
+Once your deployment is working, optimize for better cache hit rates and lower latency.
+
+=== Optimize Cache Hit Rate
+
+* **Increase Cache Weight:** In your `LLMInferenceService`, increase the weight of `kv-cache-utilization-scorer` and `prefix-cache-scorer` relative to `queue-scorer`.
+* **Use Consistent Prompts:** Design your application to use consistent system prompts and conversation prefixes to maximize cache reuse.
+* **Monitor Cache Eviction:** Check `vllm_llmd_kv_cache_evictions` to see if cache is being evicted too frequently. If so, increase GPU memory allocation.
+
+=== Optimize Latency
+
+* **Prefill/Decode Disaggregation:** For high-concurrency scenarios, consider splitting Prefill and Decode into separate pools (advanced configuration).
+* **Reduce Model Length:** If `max-model-len` is too high, reduce it to free GPU memory for larger cache.
+* **Scale Horizontally:** Add more worker pods to distribute load and increase cache capacity.
+
+== 6. Emergency Reset (The "Nuke It" Option)
+
+If your environment is hopelessly tangled and you need to restart the deployment from scratch:
+
+[source,bash]
+----
+# 1. Delete the LLMInferenceService (This deletes all pods and routes)
+oc delete llminferenceservice <your-service-name> -n <your-namespace>
+
+# 2. Wait for cleanup
+oc get pods -n <your-namespace> -w
+
+# 3. Re-apply your deployment
+oc apply -f llm-inference-service.yaml
+----
+
+---
+*You now have the full lifecycle: Deploy, Operate, and Fix. You are ready to run intelligent inference at scale.*
+
+xref:index.adoc[Return to Start]

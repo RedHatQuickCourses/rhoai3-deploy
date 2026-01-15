@@ -1,0 +1,120 @@
+= Lab: Automated Deployment (GitOps)
+:navtitle: Automated Deployment
+:toc: macro
+
+// Antora metadata
+:page-role: Platform Engineer
+:description: Replacing manual UI clicks with a reproducible infrastructure script.
+
+[.lead]
+*Click-Ops does not scale. GitOps does.*
+
+In the previous modules, we selected the **Granite-2B** model and calculated the tuning parameters (`max-model-len=8192`) required to make it run safely on our hardware.
+Now, we must deploy it.
+
+You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo.
+
+But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?
+
+In this lab, We will deploy our tuned inference stack using a parameterized **Infrastructure-as-Code** script.
+
+== Step 1: Get the Lab Materials
+
+To begin, we need to acquire the automation scripts. We have packaged the entire "Serving Factory" into a Git repository.
+
+. **Open your OpenShift Terminal.**
+. **Clone the repository:**
++
+[source,bash]
+----
+git clone https://github.com/RedHatQuickCourses/rhoai3-deploy.git
+----
+. **Switch to the lab directory:**
++
+[source,bash]
+----
+cd rhoai3-deploy
+----
+
+[IMPORTANT]
+.Are you catching up?
+====
+If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
+Before proceeding, you must ensure the model is downloaded and the storage is configured.
+
+**xref:fast-track.adoc[Click here to run the Fast Track Setup Script]** to get your environment ready in 2 minutes.
+====
+
+== Step 2: The Architecture
+
+Our script (`deploy/serve_model.sh`) automates the creation of two critical Kubernetes Custom Resources (CRs):
+
+1.  **The ServingRuntime (The Engine):**
+    * Defines the *What* (vLLM image, port 8080).
+    * Defines the *How* (Tuning arguments like `max-model-len` and `gpu-memory-utilization`).
+2.  **The InferenceService (The Workload):**
+    * Binds the Engine to the Data Connection (S3).
+    * Requests the specific hardware (1 NVIDIA GPU).
+
+== Step 3: Inspect the Automation
+
+It is designed to be idempotent—you can run it ten times, and it will simply ensure the state matches your intent.
+
+.Key Configuration Block (deploy/serve_model.sh)
+[source,bash]
+----
+MODEL_NAME="granite-2b-server"
+MODEL_PATH="ibm-granite/granite-3.3-2b-instruct"
+CONTEXT_LIMIT="8192"  # <--- Applying our sizing math from Module 2
+----
+
+== Step 4: Execute the Deployment
+
+. **Run the deployment script:**
++
+[source,bash]
+----
+chmod +x deploy/serve_model.sh
+./deploy/serve_model.sh
+----
+. **Watch the Output:**
+    * You will see it create the `ServingRuntime`.
+    * You will see it create the `InferenceService`.
+    * It will then enter a wait loop, checking the Kubernetes status until the model is fully loaded into GPU memory.
+
+*Expected Result:*
+`✅ SUCCESS: Model is Serving!`
+
+== Step 5: Validate the Tuning
+
+Let's prove that our tuning parameters actually applied.
+
+. **Check the Pod Arguments:**
++
+[source,bash]
+----
+oc get pod -l serving.kserve.io/inferenceservice=granite-2b-server \
+  -n rhoai-model-registry-lab \
+  -o jsonpath='{.items[0].spec.containers[0].args}'
+----
+* *Verify:* Look for `"--max-model-len=8192"`. If this is present, your "Safety Valve" is active.
+
+. **Test the API:**
+The script outputs a `curl` command. Run it to confirm the model is reasoning.
++
+[source,bash]
+----
+# Get the URL dynamically
+export URL=$(oc get inferenceservice granite-2b-server -n rhoai-model-registry-lab -o jsonpath='{.status.url}')
+
+# Send a prompt
+curl -k $URL/v1/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "granite-2b-server",
+    "prompt": "Define 'GitOps' in one sentence.",
+    "max_tokens": 60
+  }'
+----
+
+xref:course-summary.adoc[Next: Course Summary]

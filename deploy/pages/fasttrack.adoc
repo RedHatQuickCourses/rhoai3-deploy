@@ -1,0 +1,52 @@
+= Fast-Track: Skip to Serving
+:navtitle: Fast-Track Setup
+:page-role: Student / Lab User
+:description: A utility script to bypass the Registry setup and jump straight to Model Serving.
+
+[.lead]
+*Did you skip Zone 2 (Data & Models)?*
+
+If you want to jump straight to **Zone 3 (Serving)** without building the full Model Registry infrastructure, you can use the **Fast-Track Script**.
+
+This utility automates the "grunt work" of the AI Engineer:
+1.  Deploys a MinIO Object Store ("The Vault").
+2.  Creates a Data Connection in OpenShift AI.
+3.  Downloads a model (`Granite-3.0-2b`) and places it in the vault.
+
+[IMPORTANT]
+.Ungated Models Only
+====
+This script only works with **Public/Ungated** models (like IBM Granite 3.0 or Qwen 2.5). 
+It does not support gated models (like Llama 3) that require a Hugging Face Token, as it runs non-interactively in the cluster.
+====
+
+== Running the Script
+
+1.  Open your OpenShift Terminal.
+2.  Navigate to the repository root.
+3.  Execute the script:
++
+[source,bash]
+----
+chmod +x deploy/fast_track_serving.sh
+./deploy/fast_track_serving.sh
+----
+
+== Verification
+
+Once the script completes (look for `✅ SUCCESS`), verify the environment is ready for serving:
+
+. **Check the Data Connection:**
+* Open the **RHOAI Dashboard**.
+* Go to **Settings** -> **Data Connections**.
+* Ensure `aws-connection-minio` is listed.
+
+. **Check the Artifact:**
+* Verify the model files exist in the bucket.
++
+[source,bash]
+----
+oc rsh -n rhoai-model-registry-lab deployment/minio ls -l /data/models-secure/ibm-granite/granite-3.0-2b-instruct
+----
+
+xref:model-serving.adoc[Return to the Serving Lab]

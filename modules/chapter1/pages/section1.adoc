@@ -1,162 +1,66 @@
-= Architecture: Intelligent Routing for Model Deployment
-:navtitle: Architecture Deep Dive
+= GPU Architecture: Matching Iron to Workload
+:navtitle: GPU Architecture Guide
 :toc: macro
 
 // Antora metadata
-:page-role: architecture-concept
-:description: Technical deep dive into llm-d components, intelligent routing, and KV cache off-loading for all model deployments.
+:page-role: Platform Architect
+:description: Understanding NVIDIA architectures (Ampere, Hopper, Blackwell) and when to use them.
 
 [.lead]
-*Understanding the difference between "deploying a model" and "deploying intelligently" is the key to production-grade AI.*
+*Don't bring a Ferrari to a grocery run. Don't bring a sedan to a Formula 1 race.*
 
-When you deploy a model from your registry, you have a choice: use standard serving (simple, but wasteful) or use **Distributed Inference with `llm-d`** (intelligent, efficient, and production-ready).
+In traditional IT, you might standardize on one CPU type (e.g., "Generic x86"). In AI, standardizing on one GPU type is a fast track to bankruptcy or performance bottlenecks.
+Deploying a small 2B model on an H100 is financial waste. Deploying a 70B model on an A10G is a performance bottleneck.
 
-This section explains how `llm-d` transforms every model deployment—whether from your private registry or the public catalog—into an intelligent, cache-aware service that maximizes GPU ROI.
+To build a cost-effective factory, you must understand the "Three Generations" of hardware currently powering the enterprise.
 
-== The Core Concept: Intelligent Disaggregation
+== 1. The Workhorse: Ampere (A100, A10G)
+* **Era:** The "Standard" (2020-2022).
+* **The Card:** **NVIDIA A10G** (24GB).
+* **Best For:** Most inference workloads (7B - 13B models).
+* **The Reality:**
+** This is likely what your cloud provider or on-prem cluster has the most of.
+** It excels at **FP16** (Half Precision) math.
+** **Limitation:** It lacks native hardware acceleration for FP8 (8-bit floating point). If you quantize to 8-bit, you are saving memory, but you aren't gaining the massive compute speedup seen in newer cards.
 
-The `llm-d` architecture follows a "split-plane" design that separates **orchestration** (Control Plane) from **execution** (Data Plane).
+[NOTE]
+.The "L" Series (L4, L40S)
+The **Ada Lovelace** generation (L4, L40S) acts as a bridge. It is newer than Ampere and *does* support FP8, making the **L40S** a fantastic, cheaper alternative to the A100 for inference.
 
-* **The Control Plane (The "Traffic Controller"):** The `llm-d` Inference Scheduler. It maintains real-time metadata about all running model pods, tracks KV Cache locations, and makes intelligent routing decisions.
-* **The Data Plane (The "Workers"):** The vLLM pods that actually run inference. These are managed by `llm-d` but execute the model computation.
+== 2. The Speed Demon: Hopper (H100)
+* **Era:** The "Transformer Native" (2023+).
+* **The Card:** **NVIDIA H100** (80GB).
+* **Best For:** Large models (70B+) and high-throughput batching.
+* **The Killer Feature:** **The Transformer Engine**.
+** The H100 can natively process **FP8** data.
+** This means it processes math twice as fast as FP16, while using half the memory bandwidth.
+* **The Strategy:** If you have H100s, you *must* use FP8 quantization. Running standard FP16 models on an H100 leaves 50% of the performance on the table.
 
-This separation enables capabilities that standard deployments cannot provide: intelligent routing, cache affinity, and resource optimization.
+== 3. The Future: Blackwell (B100/B200)
+* **Era:** The "Trillion Parameter" Scale.
+* **The Innovation:** **FP4** Support.
+* **The Implication:** This architecture is designed for models so massive they need to be compressed to 4-bits to run economically.
 
-== Component Breakdown
-
-=== 1. The Inference Scheduler (Control Plane)
-
-This is the "brain" of intelligent routing. It runs as a separate service in your cluster and makes routing decisions for every inference request.
-
-* **Technology:** A Kubernetes-native controller that integrates with the Gateway API.
-* **Function:** Maintains a real-time view of all vLLM pods, their health, queue depth, and—critically—their KV Cache state.
-* **The Intelligence:** When a request arrives, the scheduler:
-  * **Filters** unhealthy or overloaded pods.
-  * **Scores** remaining pods based on queue length and **KV Cache Affinity** (does this pod already have the conversation context?).
-  * **Routes** the request to the optimal pod.
-
-=== 2. The Gateway API Integration
-
-The Gateway API (Envoy) acts as the "front door" for all inference traffic. It integrates with the Inference Scheduler to execute routing decisions.
-
-* **Technology:** OpenShift Service Mesh or kGateway (Gateway API compliant).
-* **Function:** Intercepts HTTP requests, queries the scheduler for routing decisions, and forwards traffic to the selected pod.
-* **The Flow:**
-  1. User sends a request to `/v1/chat/completions`.
-  2. Gateway intercepts and queries the scheduler: *"Where should this go?"*
-  3. Scheduler responds with a pod address (based on cache affinity and load).
-  4. Gateway forwards the request to that specific pod.
-
-=== 3. The vLLM Pods (Data Plane)
-
-These are the actual inference engines. In an `llm-d` deployment, they are organized into pools:
-
-* **Prefill Pods:** Handle the compute-intensive prompt processing. These are optimized for throughput.
-* **Decode Pods:** Handle the latency-sensitive token generation. These are optimized for memory and speed.
-
-* **The KV Cache:** Each pod maintains a cache of conversation contexts in GPU memory. The scheduler uses this cache state to make routing decisions.
-
-=== 4. Model Source Flexibility
-
-`llm-d` works with models from any source—your private registry, the public catalog, or Hugging Face. The intelligent routing and cache management apply **regardless of the model source**. Simply provide the model URI in the standard format (e.g., `hf://Qwen/Qwen3-0.6B` or `s3://your-bucket/model-path`).
-
-== The Data Flow: Intelligent Request Lifecycle
-
-Understanding this flow is critical for troubleshooting and optimization. The scheduler makes the decision, but the Gateway moves the data.
-
-[cols="1,4"]
-|===
-| **Step** | **What Happens**
-
-| **1. Request In**
-| A user sends an OpenAI-compatible request (e.g., `/v1/chat/completions`) to the `HTTPRoute` endpoint.
-
-| **2. Gateway Intercepts**
-| The Gateway API (Envoy) in `openshift-ingress` receives the traffic and extracts request metadata (conversation ID, model name, etc.).
-
-| **3. Scheduler Query**
-| The Gateway forwards the **request metadata** to the Inference Scheduler, effectively asking: *"Where should this go?"*
-
-| **4. Intelligent Decision (Filter & Score)**
-| The scheduler executes its routing logic:
-* **Filter:** Removes unhealthy, overloaded, or incompatible pods.
-* **Score:** Scores remaining pods based on:
-  * Queue depth (lower is better).
-  * **KV Cache Affinity** (does this pod already hold the conversation context?).
-  * Resource availability.
-
-| **5. Routing Instruction**
-| The scheduler responds to the Gateway with a specific pod address:
-* **Cache Hit (Fast Path):** Routes to the Decode pod that already has the context.
-* **Cache Miss (Slow Path):** Routes to a Prefill pod first, then to a Decode pod for generation.
-
-| **6. Execution**
-| The Gateway forwards the actual data payload to the chosen pod. The pod generates the response and streams it back through the Gateway to the user.
-
-|===
-
-== The Value: KV Cache Off-Loading
-
-The KV Cache is the "memory" of your inference service. It stores the conversation context (the processed prompt and generated tokens) in GPU memory. `llm-d` manages this cache intelligently:
-
-=== Cache Affinity Routing
-
-When a user continues a conversation, the scheduler checks which pod holds the relevant KV Cache. If found (cache hit), the request is routed directly to that pod, avoiding expensive Prefill computation.
-
-**The Benefit:** 
-* **Lower Latency:** Time-To-First-Token (TTFT) is dramatically reduced for cache hits.
-* **Lower Cost:** You skip the expensive Prefill phase, using GPU cycles only for generation.
-* **Higher Throughput:** More users can be served on the same hardware.
-
-=== Cache Management Across All Deployments
-
-Whether you deploy from your private registry or the public catalog, `llm-d` provides intelligent cache management:
-
-* **Automatic Cache Tracking:** The scheduler maintains a map of cache locations across all pods.
-* **Cache-Aware Scaling:** When scaling up, new pods are populated with cache from existing pods when possible.
-* **Cache Eviction:** When memory pressure occurs, the scheduler intelligently evicts least-recently-used caches.
-
-**The Win:** Every model deployment benefits from intelligent cache management, maximizing the ROI of your GPU infrastructure.
-
-== System Requirements for the Lab
-
-To build this architecture in the next module, your cluster must meet these minimums:
+== Summary: The Selection Matrix
 
 [cols="1,2,2"]
 |===
-| **Component** | **Requirement** | **Role**
+| Workload | Recommended Hardware | Quantization Strategy
 
-| **OpenShift AI**
-| v3.0
-| The Platform
+| **Small / Mid Models**
+(Granite-2B, Llama-8B)
+| **NVIDIA A10G / L4**
+| `FP16` or `INT8` (for memory savings)
 
-| **OpenShift**
-| 4.19+ (4.20 recommended)
-| Required for Gateway API support
+| **Large Models**
+(Granite-34B, Llama-70B)
+| **NVIDIA A100 / L40S**
+| `AWQ` (INT4) or `GPTQ`
 
-| **Gateway API**
-| Compliant implementation (Service Mesh or kGateway)
-| The routing layer
-
-| **Operators**
-| LeaderWorkerSet (LWS) Operator
-| Manages pod fleets for `llm-d`
-
-| **Hardware**
-| Data Center GPUs (H100, A100, L40S)
-| The inference engines
-
-| **Compute**
-| 2 vCPUs, 4GB RAM (per pod)
-| For scheduler and workers
+| **Massive Scale**
+(DeepSeek-V3, Llama-405B)
+| **NVIDIA H100**
+| `FP8` (Native Acceleration)
 |===
 
-[WARNING]
-.Critical: Network Fabric Requirements
-====
-**Do not underestimate the network.** +
-High-performance "East-West" cache sharing requires a low-latency fabric (InfiniBand or RoCE). A standard 10GbE TCP/IP network will be a bottleneck and is **not supported** for advanced features like Mixture-of-Experts (MoE).
-====
-
----
-*Now that you understand the blueprint, it is time to deploy.*
+xref:hardware-sizing.adoc[Next: Calculate Your VRAM Requirements]

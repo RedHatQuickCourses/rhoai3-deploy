@@ -1,0 +1,396 @@
+= Lab: Deploying Models with Intelligent Routing
+:navtitle: The Deployment Lab
+:toc: macro
+
+// Antora metadata
+:page-role: hands-on-lab
+:description: Step-by-step guide to deploying a model from the registry using llm-d for intelligent routing and KV cache off-loading.
+
+[.lead]
+*Theory is over. It is time to deploy intelligently.*
+
+In this lab, you will take on the role of a **Platform Engineer**. You have a model registered in your private Model Registry (from the previous course). Your task is to deploy that model using **Distributed Inference with `llm-d`**, enabling intelligent routing and KV cache off-loading that maximizes GPU efficiency.
+
+[IMPORTANT]
+.Prerequisites
+====
+* **Model Ready:** You have a model ready to deploy (from your private registry, the public catalog, or Hugging Face). We will use `Qwen/Qwen3-0.6B` as an example.
+* **Cluster Access:** You are logged into an OpenShift AI 3.0 cluster via terminal (`oc login`).
+* **Permissions:** You have `cluster-admin` or sufficient namespace privileges.
+* **Repository:** You have access to the deployment configurations (we will provide the YAML).
+====
+
+== Step 1: Foundation - Verify Prerequisites
+
+Before deploying with `llm-d`, verify that your cluster has the required infrastructure components.
+
+=== 1.1 Install the LeaderWorkerSet (LWS) Operator (Multi-Node & MoE Only)
+
+[NOTE]
+.When You Need LeaderWorkerSet
+====
+The LeaderWorkerSet Operator is **only required** for:
+* **Multi-node deployments:** When your model is too large for a single node and requires sharding across multiple nodes.
+* **Mixture-of-Experts (MoE) models:** When deploying MoE models that require expert parallelism across nodes.
+
+For **single-node deployments** (most common use case), the LeaderWorkerSet Operator is **not required**. You can skip this step.
+====
+
+If you are deploying a multi-node or MoE model, install the LeaderWorkerSet Operator:
+
+. **Install via OpenShift Console:**
++
+1. Navigate to **Operators** → **OperatorHub**.
+2. Search for **"Leader Worker Set"**.
+3. Click **Install** and accept the defaults.
+4. Wait for the operator to be **Installed** (Status: Succeeded).
+
+. **Verify Installation:**
++
+[source,bash]
+----
+oc get csv -n openshift-operators | grep leader-worker-set
+----
++
+*Expected Output:*
+----
+leader-worker-set-operator.v1.x.x    Succeeded
+----
+
+[NOTE]
+.Single-Node Deployments
+====
+If you are deploying a standard model on a single node (the most common scenario), you can skip the LeaderWorkerSet installation and proceed directly to Step 1.2.
+====
+
+=== 1.2 Verify Gateway API Support
+
+The Gateway API is required for intelligent routing. OpenShift AI 3.0 includes Gateway API support via Service Mesh or kGateway.
+
+. **Check Gateway API CRDs:**
++
+[source,bash]
+----
+oc get crd | grep gateway
+----
++
+*Expected Output:* You should see `httproutes.gateway.networking.k8s.io` and related CRDs.
+
+[NOTE]
+.If Gateway API is Not Available
+====
+If you do not see Gateway API CRDs, you may need to install OpenShift Service Mesh or kGateway. Consult your cluster administrator or the OpenShift AI 3.0 documentation.
+====
+
+== Step 2: Deploy Your Registered Model with llm-d
+
+Now that the foundation is in place, you will deploy the model from your registry using the `llm-d` runtime. This enables intelligent routing and KV cache off-loading.
+
+=== 2.1 Create the Project
+
+. **Create a namespace for your deployment:**
++
+[source,bash]
+----
+oc new-project my-llmd-deployment
+----
+
+=== 2.2 Deploy Using LLMInferenceService
+
+The `LLMInferenceService` Custom Resource tells the OpenShift AI operator to deploy your model using the `llm-d` runtime with intelligent routing enabled.
+
+. **Create the Deployment YAML:**
++
+Save the following as `llm-inference-service.yaml`. This configuration:
+* Deploys your model (supports Hugging Face, private registry, or S3 URIs).
+* Enables the `llm-d` runtime with intelligent routing.
+* Configures KV cache-aware scoring for optimal routing decisions.
+
+[source,yaml]
+----
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: qwen-registry
+  namespace: my-llmd-deployment
+  annotations:
+    opendatahub.io/hardware-profile-name: gpu-profile
+    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
+    opendatahub.io/model-type: generative
+    openshift.io/display-name: Qwen from Registry
+    security.opendatahub.io/enable-auth: 'false'
+spec:
+  replicas: 1
+  model:
+    # Model URI - supports Hugging Face, private registry, or S3
+    # Examples: hf://Qwen/Qwen3-0.6B, s3://your-bucket/model-path, oci://registry/model
+    uri: hf://Qwen/Qwen3-0.6B
+    name: Qwen/Qwen3-0.6B
+  router:
+    scheduler:
+      template:
+        containers:
+          - name: main
+            env:
+              - name: TOKENIZER_CACHE_DIR
+                value: /tmp/tokenizer-cache
+              - name: HF_HOME
+                value: /tmp/tokenizer-cache
+              - name: TRANSFORMERS_CACHE
+                value: /tmp/tokenizer-cache
+              - name: XDG_CACHE_HOME
+                value: /tmp
+            args:
+              - --pool-group
+              - inference.networking.x-k8s.io
+              - '--pool-name'
+              - '{{ ChildName .ObjectMeta.Name `-inference-pool` }}'
+              - '--pool-namespace'
+              - '{{ .ObjectMeta.Namespace }}'
+              - '--zap-encoder'
+              - json
+              - '--grpc-port'
+              - '9002'
+              - '--grpc-health-port'
+              - '9003'
+              - '--secure-serving'
+              - '--model-server-metrics-scheme'
+              - https
+              - '--config-text'
+              - |
+                apiVersion: inference.networking.x-k8s.io/v1alpha1
+                kind: EndpointPickerConfig
+                plugins:
+                - type: single-profile-handler
+                - type: queue-scorer
+                - type: kv-cache-utilization-scorer
+                - type: prefix-cache-scorer
+                schedulingProfiles:
+                - name: default
+                  plugins:
+                  - pluginRef: queue-scorer
+                    weight: 2
+                  - pluginRef: kv-cache-utilization-scorer
+                    weight: 2
+                  - pluginRef: prefix-cache-scorer
+                    weight: 3
+            volumeMounts:
+              - name: tokenizer-cache
+                mountPath: /tmp/tokenizer-cache
+              - name: cachi2-cache
+                mountPath: /cachi2
+        volumes:
+          - name: tokenizer-cache
+            emptyDir: {}
+          - name: cachi2-cache
+            emptyDir: {}
+    route: { }
+    gateway: { }
+  template:
+    tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+    containers:
+      - name: main
+        env:
+          - name: VLLM_ADDITIONAL_ARGS
+            value: "--disable-uvicorn-access-log --max-model-len=16000"
+        resources:
+          limits:
+            cpu: '1'
+            memory: 8Gi
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: '1'
+            memory: 8Gi
+            nvidia.com/gpu: "1"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTPS
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 30
+          failureThreshold: 5
+----
+
+[NOTE]
+.Key Configuration: Intelligent Routing
+====
+The `scheduler` section configures the intelligent routing behavior:
+
+* **`kv-cache-utilization-scorer`:** Routes requests to pods that already hold the relevant KV Cache (cache hits).
+* **`prefix-cache-scorer`:** Routes requests based on prompt prefix matching, enabling even more efficient cache reuse.
+* **`queue-scorer`:** Balances load by considering pod queue depth.
+
+The weights (2, 2, 3) determine the relative importance of each scoring factor. Higher weight on `prefix-cache-scorer` prioritizes cache affinity.
+====
+
+. **Apply the Deployment:**
++
+[source,bash]
+----
+oc apply -f llm-inference-service.yaml
+----
+
+. **Monitor the Deployment:**
++
+[source,bash]
+----
+oc get llminferenceservice -n my-llmd-deployment -w
+----
++
+Wait for the status to show **Ready**. This may take several minutes as the model images are pulled and the pods initialize.
+
+[NOTE]
+.Status Check
+====
+The status may briefly show *Failed* in the dashboard while images pull.
+Check the pods: `oc get pods -n my-llmd-deployment`
+Wait for the `model` and `inference` pods to be `Running`.
+====
+
+=== 2.3 Verify the Intelligent Routing Components
+
+Once the deployment is ready, verify that the intelligent routing components are running:
+
+. **Check the Inference Scheduler:**
++
+[source,bash]
+----
+oc get pods -n my-llmd-deployment -l component=inference-scheduler
+----
++
+*Expected Output:* You should see a pod named something like `qwen-registry-inference-scheduler-xxx` in `Running` status.
+
+. **Check the vLLM Worker Pods:**
++
+[source,bash]
+----
+oc get pods -n my-llmd-deployment -l component=vllm-worker
+----
++
+*Expected Output:* You should see vLLM worker pods in `Running` status.
+
+. **Check the HTTPRoute:**
++
+[source,bash]
+----
+oc get httproute -n my-llmd-deployment
+----
++
+*Expected Output:* You should see an HTTPRoute that points to the `openshift-ai-inference` gateway.
+
+== Step 3: Expose and Test the Service
+
+Now that your model is deployed with intelligent routing, you need to expose it and verify that routing decisions are being made correctly.
+
+=== 3.1 Get the Inference URL
+
+. **Retrieve the Gateway Address:**
++
+[source,bash]
+----
+export INFERENCE_URL=$(oc get gateway openshift-ai-inference -n openshift-ingress -o jsonpath='{.status.addresses[0].value}')
+echo "Inference Endpoint: http://$INFERENCE_URL/my-llmd-deployment/qwen-registry/v1"
+----
+
+=== 3.2 Test Intelligent Routing (Cache Hit Verification)
+
+We will prove that the scheduler is routing based on cache affinity by sending two requests: one "cold" (cache miss) and one "warm" (cache hit).
+
+. **Step 1: The "Cold" Request (Baseline)**
++
+Send a request with a unique system prompt. This will be a cache miss, requiring full Prefill computation.
+
+[source,bash]
+----
+time curl -k -X POST "http://$INFERENCE_URL/my-llmd-deployment/qwen-registry/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-0.6B",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant talking about OpenShift AI."},
+      {"role": "user", "content": "Explain Kubernetes in 50 words."}
+    ]
+  }'
+----
++
+*Note the `real` time from the output. This is your baseline (cache miss).*
+
+. **Step 2: The "Warm" Request (Cache Hit)**
++
+Send the **exact same** request immediately. The scheduler should recognize the prefix hash and route to the same pod, resulting in a cache hit.
+
+[source,bash]
+----
+# Run the exact same command again
+time curl -k -X POST "http://$INFERENCE_URL/my-llmd-deployment/qwen-registry/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-0.6B",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant talking about OpenShift AI."},
+      {"role": "user", "content": "Explain Kubernetes in 50 words."}
+    ]
+  }'
+----
++
+*Compare the `real` time. The second request should be significantly faster (lower TTFT) due to the cache hit.*
+
+[NOTE]
+.Understanding the Results
+====
+* **First Request (Cold):** Requires Prefill computation. Higher latency, higher GPU usage.
+* **Second Request (Warm):** Cache hit. Lower latency, lower GPU usage (only Decode phase).
+
+This demonstrates the value of intelligent routing: you are avoiding expensive recomputation by routing to pods that already hold the context.
+====
+
+== Step 4: Observability - Verify Intelligent Routing
+
+Validate your deployment using the OpenShift AI Dashboard metrics.
+
+=== 4.1 Access the Metrics
+
+1. Navigate to **OpenShift Console** → **Observe** → **Dashboards**.
+2. Look for:
+   * **Networking/Ingress Dashboard:** Shows request routing patterns.
+   * **Prometheus Dashboard:** Shows custom metrics from `llm-d`.
+   * **NVIDIA DCGM Exporter Dashboard:** Shows GPU utilization.
+
+=== 4.2 Key Metrics to Monitor
+
+[cols="1,2,2"]
+|===
+| **Business Goal** | **Prometheus Metric** | **What to Look For**
+
+| **Prove Intelligent Routing**
+| `vllm_llmd_kv_cache_hit_rate`
+| **Your #1 ROI Metric.** After sending multiple requests, this should show cache hits (values > 0). A 90% hit rate means you are skipping expensive Prefill compute 90% of the time.
+
+| **Prove Responsiveness**
+| `vllm_llmd_time_to_first_token_seconds` (TTFT)
+| The primary measure of perceived speed. Cache hits should show lower TTFT than cache misses.
+
+| **Prove Throughput**
+| `vllm_llmd_time_per_output_token_seconds` (TPOT)
+| The "generation speed" metric. Should remain consistent regardless of cache state.
+
+| **Prove Efficiency**
+| `vllm_llmd_gpu_utilization_seconds`
+| Confirms expensive GPUs are active and not idling. Should be high during active inference.
+|===
+
+== Mission Accomplished
+
+You have successfully deployed a model from your private registry using **Distributed Inference with `llm-d`**. Your deployment now benefits from:
+
+* **Intelligent Routing:** Requests are routed to pods based on cache affinity and load.
+* **KV Cache Off-Loading:** Cache hits avoid expensive Prefill computation, reducing latency and cost.
+* **Resource Optimization:** Every GPU cycle is used efficiently, maximizing ROI.
+
+---
+*Your model is now running intelligently. Next, let's ensure you can troubleshoot and maintain this deployment.*
