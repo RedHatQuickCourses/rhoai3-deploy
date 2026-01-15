@@ -138,21 +138,22 @@ oc get httproute -n <your-namespace> -o yaml
   * `parentRefs`: Should reference the `openshift-ai-inference` gateway.
   * `backendRefs`: Should point to your inference service.
 
-== 4. Debugging Model Loading (Registry Connection)
+== 4. Debugging Model Loading
 
-If your model is registered in the private registry but fails to load, verify the connection.
+If your model fails to load, verify the model URI and storage access.
 
 === Check 1: Verify Model URI
 
-The `model.uri` in your `LLMInferenceService` must match the URI format expected by your registry:
+The `model.uri` in your `LLMInferenceService` must use the correct format:
 
 [source,bash]
 ----
 oc get llminferenceservice <your-service-name> -n <your-namespace> -o jsonpath='{.spec.model.uri}'
 ----
 +
-* **For Hugging Face:** Should be `hf://<model-name>`.
-* **For Private Registry:** Should be `s3://<bucket>/<path>` or `oci://<registry>/<image>`.
+* **For Hugging Face:** Should be `hf://<model-name>` (e.g., `hf://Qwen/Qwen3-0.6B`).
+* **For Private S3:** Should be `s3://<bucket>/<path>`.
+* **For OCI Registry:** Should be `oci://<registry>/<image>`.
 
 === Check 2: Verify Storage Access
 
@@ -166,16 +167,15 @@ oc rsh -n <your-namespace> <vllm-worker-pod-name> curl -v <your-s3-endpoint>
 +
 * **Expected:** Should return a successful connection (may require authentication).
 
-=== Check 3: Check Model Registry Connection
+=== Check 3: Verify Model Availability
 
-If your model is in the private registry, verify the registry is accessible:
+For Hugging Face models, verify the model name is correct. For private storage, verify the path exists and is accessible:
 
 [source,bash]
 ----
-oc get modelregistries -n rhoai-model-registries
+# Test Hugging Face model access (from a pod with internet access)
+curl -I https://huggingface.co/Qwen/Qwen3-0.6B
 ----
-+
-* **Expected:** Your registry should be in `Ready` status.
 
 == 5. Performance Optimization
 

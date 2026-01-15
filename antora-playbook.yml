@@ -1,6 +1,6 @@
 site:
-  title: FIXME Course Title
-  start_page: REPLACEREPONAME::index.adoc
+  title: Intelligent Model Deployment with llm-d
+  start_page: rhoai3-deploy::index.adoc
 
 content:
   sources:

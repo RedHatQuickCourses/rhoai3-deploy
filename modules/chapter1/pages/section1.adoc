@@ -56,9 +56,9 @@ These are the actual inference engines. In an `llm-d` deployment, they are organ
 
 * **The KV Cache:** Each pod maintains a cache of conversation contexts in GPU memory. The scheduler uses this cache state to make routing decisions.
 
-=== 4. The Model Registry Connection
+=== 4. Model Source Flexibility
 
-When you deploy from your private registry, `llm-d` reads the model URI from the registry metadata and pulls the weights from your secure storage (S3/MinIO). The intelligent routing and cache management apply **regardless of the model source**.
+`llm-d` works with models from any source—your private registry, the public catalog, or Hugging Face. The intelligent routing and cache management apply **regardless of the model source**. Simply provide the model URI in the standard format (e.g., `hf://Qwen/Qwen3-0.6B` or `s3://your-bucket/model-path`).
 
 == The Data Flow: Intelligent Request Lifecycle
 
