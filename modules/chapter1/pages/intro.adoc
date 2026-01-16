@@ -54,9 +54,9 @@ You will learn to tune critical parameters like:
 Finally, we will abandon the "Click-Ops" dashboard.
 You will deploy a production-ready **InferenceService** using a parameterized script. This moves your infrastructure from "manual configuration" to "code," enabling reproducible and scalable deployments.
 
-== Our Laboratory Model: Granite-3.3-2B
+== Our Laboratory Model: granite-4.0-micro
 
-To practice these concepts without requiring a massive GPU cluster, we will standardize on the **IBM Granite-3.3-2B-Instruct** model.
+To practice these concepts without requiring a massive GPU cluster, we will standardize on the **IBM granite-4.0-micro** model.
 
 * **Why this model?**
 

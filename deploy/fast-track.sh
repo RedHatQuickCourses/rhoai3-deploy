@@ -12,8 +12,8 @@
 set -e
 
 # --- CONFIGURATION ---
-NAMESPACE="rhoai-model-registry-lab"
-MODEL_ID="ibm-granite/granite-3.0-2b-instruct" # Using 2B for speed, change to 8b if needed
+NAMESPACE="rhoai-model-vllm-lab"
+MODEL_ID="ibm-granite/granite-4.0-micro" # Using 2B for speed, change to 8b if needed
 S3_BUCKET="models-secure" # Matching the Serving Lab bucket name
 MINIO_ACCESS_KEY="minio"
 MINIO_SECRET_KEY="minio123"

@@ -9,7 +9,7 @@
 [.lead]
 *Click-Ops does not scale. GitOps does.*
 
-In the previous modules, we selected the **Granite-2B** model and calculated the tuning parameters (`max-model-len=8192`) required to make it run safely on our hardware.
+In the previous modules, we selected the **Granite-4B-micro** model and calculated the tuning parameters (`max-model-len=8192`) required to make it run safely on our hardware.
 Now, we must deploy it.
 
 You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo.
@@ -63,9 +63,9 @@ It is designed to be idempotent—you can run it ten times, and it will simply e
 .Key Configuration Block (deploy/serve_model.sh)
 [source,bash]
 ----
-MODEL_NAME="granite-2b-server"
-MODEL_PATH="ibm-granite/granite-3.3-2b-instruct"
-CONTEXT_LIMIT="8192"  # <--- Applying our sizing math from Module 2
+MODEL_NAME="granite-4.0-micro"
+MODEL_PATH="ibm-granite/granite-4.0-micro"
+CONTEXT_LIMIT="16000"  # <--- Applying our sizing math from Module 2
 ----
 
 == Step 4: Execute the Deployment
@@ -93,11 +93,11 @@ Let's prove that our tuning parameters actually applied.
 +
 [source,bash]
 ----
-oc get pod -l serving.kserve.io/inferenceservice=granite-2b-server \
-  -n rhoai-model-registry-lab \
+oc get pod -l serving.kserve.io/inferenceservice=granite-4b-server \
+  -n rhoai-model-vllm-lab \
   -o jsonpath='{.items[0].spec.containers[0].args}'
 ----
-* *Verify:* Look for `"--max-model-len=8192"`. If this is present, your "Safety Valve" is active.
+* *Verify:* Look for `"--max-model-len=16000"`. If this is present, your "Safety Valve" is active.
 
 . **Test the API:**
 The script outputs a `curl` command. Run it to confirm the model is reasoning.
@@ -105,13 +105,13 @@ The script outputs a `curl` command. Run it to confirm the model is reasoning.
 [source,bash]
 ----
 # Get the URL dynamically
-export URL=$(oc get inferenceservice granite-2b-server -n rhoai-model-registry-lab -o jsonpath='{.status.url}')
+export URL=$(oc get inferenceservice granite-4.0-micro -n rhoai-model-vllm-lab -o jsonpath='{.status.url}')
 
 # Send a prompt
 curl -k $URL/v1/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "granite-2b-server",
+    "model": "granite-4.0-micro",
     "prompt": "Define 'GitOps' in one sentence.",
     "max_tokens": 60
   }'

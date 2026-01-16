@@ -21,7 +21,7 @@ You have now built a governed **AI Serving Factory**. Let's review the engineeri
 | Phase | The Engineering Decision
 
 | **1. Strategy**
-| Instead of grabbing random models, you selected **Granite-3.3-2B** from the **Red Hat AI Validated Repository**.
+| Instead of grabbing random models, you selected **Granite-4.0-micro** from the **Red Hat AI Validated Repository**.
 *Result:* You gained legal certainty (Apache 2.0) and performance predictability.
 
 | **2. Architecture**
@@ -54,7 +54,7 @@ Configure **KNative** to scale your pods based on concurrency.
 * *Trigger:* If `concurrency > 10`, spin up a second GPU pod.
 
 * **3. Quantization:**
-Explore the **Quantization Labs** (coming soon) to shrink your Granite-2B model to **INT8**.
+Explore the **Quantization Labs** (coming soon) to shrink your Granite-4B model to **INT8**.
 * *Goal:* Double your throughput on the same hardware.
 
 ---
