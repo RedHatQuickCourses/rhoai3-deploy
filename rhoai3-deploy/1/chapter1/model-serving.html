@@ -107,7 +107,7 @@
 <p><strong>Click-Ops does not scale. GitOps does.</strong></p>
 </div>
 <div class="paragraph">
-<p>In the previous modules, we selected the <strong>Granite-2B</strong> model and calculated the tuning parameters (<code>max-model-len=8192</code>) required to make it run safely on our hardware.
+<p>In the previous modules, we selected the <strong>Granite-4B-micro</strong> model and calculated the tuning parameters (<code>max-model-len=8192</code>) required to make it run safely on our hardware.
 Now, we must deploy it.</p>
 </div>
 <div class="paragraph">
@@ -218,9 +218,9 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <div class="listingblock">
 <div class="title">Key Configuration Block (deploy/serve_model.sh)</div>
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">MODEL_NAME="granite-2b-server"
-MODEL_PATH="ibm-granite/granite-3.3-2b-instruct"
-CONTEXT_LIMIT="8192"  # &lt;--- Applying our sizing math from Module 2</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">MODEL_NAME="granite-4.0-micro"
+MODEL_PATH="ibm-granite/granite-4.0-micro"
+CONTEXT_LIMIT="16000"  # &lt;--- Applying our sizing math from Module 2</code></pre>
 </div>
 </div>
 </div>
@@ -275,15 +275,15 @@ CONTEXT_LIMIT="8192"  # &lt;--- Applying our sizing math from Module 2</code></p
 <p><strong>Check the Pod Arguments:</strong></p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pod -l serving.kserve.io/inferenceservice=granite-2b-server \
-  -n rhoai-model-registry-lab \
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pod -l serving.kserve.io/inferenceservice=granite-4b-server \
+  -n rhoai-model-vllm-lab \
   -o jsonpath='{.items[0].spec.containers[0].args}'</code></pre>
 </div>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Verify:</strong> Look for <code>"--max-model-len=8192"</code>. If this is present, your "Safety Valve" is active.</p>
+<p><strong>Verify:</strong> Look for <code>"--max-model-len=16000"</code>. If this is present, your "Safety Valve" is active.</p>
 </li>
 </ul>
 </div>
@@ -294,13 +294,13 @@ The script outputs a <code>curl</code> command. Run it to confirm the model is r
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Get the URL dynamically
-export URL=$(oc get inferenceservice granite-2b-server -n rhoai-model-registry-lab -o jsonpath='{.status.url}')
+export URL=$(oc get inferenceservice granite-4.0-micro -n rhoai-model-vllm-lab -o jsonpath='{.status.url}')
 
 # Send a prompt
 curl -k $URL/v1/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "granite-2b-server",
+    "model": "granite-4.0-micro",
     "prompt": "Define 'GitOps' in one sentence.",
     "max_tokens": 60
   }'</code></pre>
