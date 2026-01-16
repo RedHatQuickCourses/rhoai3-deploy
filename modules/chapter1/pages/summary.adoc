@@ -7,7 +7,7 @@
 :description: Recap of the Enterprise Serving workflow and next steps for production.
 
 [.lead]
-*You have graduated from "Shadow AI."*
+*You have achieved cost-effective model inference."*
 
 At the start of this course, we identified the core problem:
 *Downloading models to a laptop is easy. Serving them at scale, on budget, and without crashing production is hard.*
@@ -33,7 +33,7 @@ You have now built a governed **AI Serving Factory**. Let's review the engineeri
 *Result:* You identified that the default 128k context window would crash your A10G GPU.
 
 | **4. Tuning**
-| You configured **vLLM** with `--max-model-len=8192`.
+| You configured **vLLM** with `--max-model-len=16000`.
 *Result:* You created a "Safety Valve" that prevents OOM errors under high load.
 
 | **5. Operations**
@@ -45,17 +45,20 @@ You have now built a governed **AI Serving Factory**. Let's review the engineeri
 
 Serving the model is just Day 1. To run a true production platform, your next steps are:
 
-* **1. Observability:**
+ * **1. Observability:**
 Configure **Prometheus** to scrape the vLLM metrics port (`8080`).
-* *Key Metric:* `vllm:num_requests_running` (Concurrency) and `vllm:gpu_cache_usage_perc` (Are we running out of KV Cache?).
+
+ * *Key Metric:* `vllm:num_requests_running` (Concurrency) and `vllm:gpu_cache_usage_perc` (Are we running out of KV Cache?).
 
 * **2. Autoscaling:**
 Configure **KNative** to scale your pods based on concurrency.
-* *Trigger:* If `concurrency > 10`, spin up a second GPU pod.
+
+ * *Trigger:* If `concurrency > 10`, spin up a second GPU pod.
 
 * **3. Quantization:**
 Explore the **Quantization Labs** (coming soon) to shrink your Granite-4B model to **INT8**.
-* *Goal:* Double your throughput on the same hardware.
+
+ * *Goal:* Double your throughput on the same hardware.
 
 ---
 *Congratulations. You are now ready to serve AI responsibly.*

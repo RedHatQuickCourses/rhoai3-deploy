@@ -9,7 +9,7 @@
 [.lead]
 *Click-Ops does not scale. GitOps does.*
 
-In the previous modules, we selected the **Granite-4B-micro** model and calculated the tuning parameters (`max-model-len=8192`) required to make it run safely on our hardware.
+In the previous modules, we selected the **Granite-4B-micro** model and calculated the tuning parameters (`max-model-len=16000`) required to make it run safely on our hardware.
 Now, we must deploy it.
 
 You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo.
