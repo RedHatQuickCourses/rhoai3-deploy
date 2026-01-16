@@ -9,7 +9,7 @@
 [.lead]
 *Click-Ops does not scale. GitOps does.*
 
-In the previous modules, we selected the **Granite-4B-micro** model and calculated the tuning parameters (`max-model-len=16000`) required to make it run safely on our hardware.
+In the previous modules, we selected the **Granite-4-micro** model and calculated the tuning parameters (`max-model-len=16000`) required to make it run safely on our hardware.
 Now, we must deploy it.
 
 You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo.
@@ -47,7 +47,7 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 
 == Step 2: The Architecture
 
-Our script (`deploy/serve_model.sh`) automates the creation of two critical Kubernetes Custom Resources (CRs):
+Our script (`deploy/deploy-serve.sh`) automates the creation of two critical Kubernetes Custom Resources (CRs):
 
 1.  **The ServingRuntime (The Engine):**
     * Defines the *What* (vLLM image, port 8080).
@@ -60,11 +60,11 @@ Our script (`deploy/serve_model.sh`) automates the creation of two critical Kube
 
 It is designed to be idempotent—you can run it ten times, and it will simply ensure the state matches your intent.
 
-.Key Configuration Block (deploy/serve_model.sh)
+.Key Configuration Block (deploy/deploy-serve.sh)
 [source,bash]
 ----
-MODEL_NAME="granite-4.0-micro"
-MODEL_PATH="ibm-granite/granite-4.0-micro"
+MODEL_NAME="granite-4-micro"
+MODEL_PATH="ibm-granite/granite-4-micro"
 CONTEXT_LIMIT="16000"  # <--- Applying our sizing math from Module 2
 ----
 
@@ -74,8 +74,8 @@ CONTEXT_LIMIT="16000"  # <--- Applying our sizing math from Module 2
 +
 [source,bash]
 ----
-chmod +x deploy/serve_model.sh
-./deploy/serve_model.sh
+chmod +x deploy/deploy-serve.sh
+./deploy/deploy-serve.sh
 ----
 . **Watch the Output:**
     * You will see it create the `ServingRuntime`.
@@ -93,7 +93,7 @@ Let's prove that our tuning parameters actually applied.
 +
 [source,bash]
 ----
-oc get pod -l serving.kserve.io/inferenceservice=granite-4b-server \
+oc get pod -l serving.kserve.io/inferenceservice=granite-4-micro \
   -n rhoai-model-vllm-lab \
   -o jsonpath='{.items[0].spec.containers[0].args}'
 ----
@@ -105,13 +105,13 @@ The script outputs a `curl` command. Run it to confirm the model is reasoning.
 [source,bash]
 ----
 # Get the URL dynamically
-export URL=$(oc get inferenceservice granite-4.0-micro -n rhoai-model-vllm-lab -o jsonpath='{.status.url}')
+export URL=$(oc get inferenceservice granite-4-micro -n rhoai-model-vllm-lab -o jsonpath='{.status.url}')
 
 # Send a prompt
 curl -k $URL/v1/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "granite-4.0-micro",
+    "model": "granite-4-micro",
     "prompt": "Define 'GitOps' in one sentence.",
     "max_tokens": 60
   }'

@@ -11,7 +11,7 @@ If you want to jump straight to **Serving** without building the full Model Regi
 This utility automates the "grunt work" of the AI Engineer:
 1.  Deploys a MinIO Object Store ("The Vault").
 2.  Creates a Data Connection in OpenShift AI.
-3.  Downloads a model (`Granite-4.0-micro`) and places it in the vault.
+3.  Downloads a model (`Granite-4-micro`) and places it in the vault.
 
 [IMPORTANT]
 .Ungated Models Only
@@ -28,8 +28,8 @@ It does not support gated models (like Llama 3) that require a Hugging Face Toke
 +
 [source,bash]
 ----
-chmod +x deploy/fast_track_serving.sh
-./deploy/fast_track_serving.sh
+chmod +x deploy/fast-track.sh
+./deploy/fast-track.sh
 ----
 
 == Verification
@@ -46,7 +46,7 @@ Once the script completes (look for `✅ SUCCESS`), verify the environment is re
 +
 [source,bash]
 ----
-oc rsh -n rhoai-model-vllm-lab deployment/minio ls -l /data/models-secure/ibm-granite/granite-4.0-micro
+oc rsh -n rhoai-model-vllm-lab deployment/minio ls -l /data/models-secure/ibm-granite/granite-4-micro
 ----
 
 xref:model-serving.adoc[Return to the Serving Lab]

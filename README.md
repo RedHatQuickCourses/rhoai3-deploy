@@ -22,16 +22,16 @@ If you are an experienced Engineer and simply want to see the **vLLM Serving Aut
 (Optional) If you do not have an S3 bucket or Data Connection, run this script to deploy MinIO and download the model automatically.
 
 ```bash
-chmod +x deploy/fast_track_serving.sh
-./deploy/fast_track_serving.sh
+chmod +x deploy/fast-track.sh
+./deploy/fast-track.sh
 ```
 
 3. Deploy the Model (GitOps)
 Run the automated deployment script. This creates the ServingRuntime (Engine) and InferenceService (Workload) with specific tuning parameters (max-model-len=8192) to prevent crashes.
 
 ```bash
-chmod +x deploy/serve_model.sh
-./deploy/serve_model.sh
+chmod +x deploy/deploy-serve.sh
+./deploy/deploy-serve.sh
 ```
 
 4. Verify
@@ -40,13 +40,13 @@ Once the script reports ✅ SUCCESS, test the API:
 ```bash
 
 # Get the URL
-export URL=$(oc get inferenceservice granite-2b-server -n rhoai-model-registry-lab -o jsonpath='{.status.url}')
+export URL=$(oc get inferenceservice granite-4-micro -n rhoai-model-vllm-lab -o jsonpath='{.status.url}')
 
 
 # Test Inference
 curl -k $URL/v1/completions \
   -H 'Content-Type: application/json' \
-  -d '{ "model": "granite-2b-server", "prompt": "Define MLOps.", "max_tokens": 50 }'
+  -d '{ "model": "granite-4-micro", "prompt": "Define MLOps.", "max_tokens": 50 }'
 📚 The Full Course (Antora)
 This repository is structured as a self-paced course. To view the full learning experience—including GPU sizing math, architecture diagrams, and vLLM deep-dives—build the documentation site.
 ```
@@ -97,15 +97,15 @@ Tuning Guide:
 Module 4: Automated Deployment
 Infrastructure-as-Code: Abandoning "Click-Ops" for reproducible scripts.
 
-The Lab: Executing serve_model.sh to deploy the tuned stack.
+The Lab: Executing deploy-serve.sh to deploy the tuned stack.
 
 📂 Repository Structure
 Plaintext
 
 /
 ├── deploy/                   # Automation Scripts
-│   ├── fast_track_serving.sh # Lab Setup (MinIO + Model Download)
-│   └── serve_model.sh        # The Deployment Logic (vLLM + KServe)
+│   ├── fast-track.sh         # Lab Setup (MinIO + Model Download)
+│   └── deploy-serve.sh        # The Deployment Logic (vLLM + KServe)
 │
 ├── docs/                     # Course Content (AsciiDoc)
 │   └── modules/ROOT/pages/
@@ -122,7 +122,7 @@ OOMKilled (Exit Code 137):
 
 Cause: The model + KV Cache exceeded GPU VRAM.
 
-Fix: Edit deploy/serve_model.sh and lower CONTEXT_LIMIT (e.g., from 8192 to 4096).
+Fix: Edit deploy/deploy-serve.sh and lower CONTEXT_LIMIT (e.g., from 8192 to 4096).
 
 Pod Stuck in Pending:
 
@@ -134,7 +134,7 @@ Timeout Waiting for Model:
 
 Cause: Downloading the model/image took longer than the script's loop.
 
-Fix: Check logs: oc logs -f -l serving.kserve.io/inferenceservice=granite-2b-server -c kserve-container.
+Fix: Check logs: oc logs -f -l serving.kserve.io/inferenceservice=granite-4-micro -c kserve-container.
 
 🔗 Next Steps
 Once you have mastered single-model serving, you are ready for the advanced modules (Coming Soon):

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =================================================================================
-# SCRIPT: fast_track_serving.sh
+# SCRIPT: fast-track.sh
 # DESCRIPTION: "The Emergency Button." 
 #              Sets up (Serving) prerequisites for users who skipped.
 #              1. Deploys MinIO (The Vault).
@@ -13,7 +13,7 @@ set -e
 
 # --- CONFIGURATION ---
 NAMESPACE="rhoai-model-vllm-lab"
-MODEL_ID="ibm-granite/granite-4.0-micro" # Using 2B for speed, change to 8b if needed
+MODEL_ID="ibm-granite/granite-4-micro" # Using 2B for speed, change to 8b if needed
 S3_BUCKET="models-secure" # Matching the Serving Lab bucket name
 MINIO_ACCESS_KEY="minio"
 MINIO_SECRET_KEY="minio123"
@@ -65,7 +65,7 @@ echo "Step 2: Wiring RHOAI Data Connection..."
 oc create secret generic aws-connection-minio \
     --from-literal=AWS_ACCESS_KEY_ID="$MINIO_ACCESS_KEY" \
     --from-literal=AWS_SECRET_ACCESS_KEY="$MINIO_SECRET_KEY" \
-    --from-literal=AWS_S3_ENDPOINT="http://minio.$NAMESPACE.svc.cluster.local:9000" \
+    --from-literal=AWS_S3_ENDPOINT="http://minio-service.$NAMESPACE.svc.cluster.local:9000" \
     --from-literal=AWS_DEFAULT_REGION="us-east-1" \
     --from-literal=AWS_S3_BUCKET="$S3_BUCKET" \
     -n "$NAMESPACE" \

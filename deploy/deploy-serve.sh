@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =================================================================================
-# SCRIPT: serve_model.sh
+# SCRIPT: deploy-serve.sh
 # ZONE: 3 (Serving & Inference)
 # DESCRIPTION: Deploys a vLLM-based InferenceService with tuned KV-Cache limits.
 #              1. Creates/Updates the vLLM ServingRuntime.
@@ -12,15 +12,40 @@ set -e
 
 # --- CONFIGURATION ---
 NAMESPACE="rhoai-model-vllm-lab"
-MODEL_NAME="granite-4.0-micro"
+MODEL_NAME="granite-4-micro"
 # The path must match what was uploaded in the fast-track or pipeline script
 # Note: KServe expects the folder *containing* the weights, not the file itself.
-MODEL_PATH="ibm-granite/granite-4.0-micro" 
+MODEL_PATH="ibm-granite/granite-4-micro" 
 DATA_CONNECTION="aws-connection-minio"
 CONTEXT_LIMIT="16000" # Requested KV Cache / Context Limit
 
 echo "🚀 Deploying Model: $MODEL_NAME"
 echo "📏 Enforcing Context Limit: $CONTEXT_LIMIT tokens"
+
+# ---------------------------------------------------------------------------------
+# Prerequisites Check
+# ---------------------------------------------------------------------------------
+echo "----------------------------------------------------------------"
+echo "Checking Prerequisites..."
+
+# Check Namespace
+if ! oc get project "$NAMESPACE" > /dev/null 2>&1; then
+    echo "➤ Creating namespace $NAMESPACE..."
+    oc new-project "$NAMESPACE"
+else
+    echo "✔ Namespace $NAMESPACE exists."
+fi
+
+# Check Data Connection exists
+if ! oc get secret "$DATA_CONNECTION" -n "$NAMESPACE" > /dev/null 2>&1; then
+    echo "❌ Error: Data Connection '$DATA_CONNECTION' not found in namespace '$NAMESPACE'"
+    echo "   Run fast-track.sh first to create the data connection."
+    exit 1
+else
+    echo "✔ Data Connection '$DATA_CONNECTION' found."
+fi
+
+echo "----------------------------------------------------------------"
 
 # ---------------------------------------------------------------------------------
 # 1. Define the Serving Runtime (The Engine)

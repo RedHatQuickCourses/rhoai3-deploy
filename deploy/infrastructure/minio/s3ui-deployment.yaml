@@ -39,7 +39,7 @@ spec:
             - containerPort: 5001
           env:
             - name: S3_ENDPOINT_URL
-              value: "http://minio-service.rhoai-model-registry-lab.svc.cluster.local:9000"
+              value: "http://minio-service.rhoai-deploy-lab.svc.cluster.local:9000"
             - name: S3_ACCESS_KEY
               value: "minio"
             - name: S3_SECRET_KEY
