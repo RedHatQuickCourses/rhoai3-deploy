@@ -112,7 +112,7 @@
 <p>This utility automates the "grunt work" of the AI Engineer:
 1.  Deploys a MinIO Object Store ("The Vault").
 2.  Creates a Data Connection in OpenShift AI.
-3.  Downloads a model (<code>Granite-4.0-micro</code>) and places it in the vault.</p>
+3.  Downloads a model (<code>Granite-4-micro</code>) and places it in the vault.</p>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -147,8 +147,8 @@ It does not support gated models (like Llama 3) that require a Hugging Face Toke
 <p>Execute the script:</p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">chmod +x deploy/fast_track_serving.sh
-./deploy/fast_track_serving.sh</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">chmod +x deploy/fast-track.sh
+./deploy/fast-track.sh</code></pre>
 </div>
 </div>
 </li>
@@ -188,7 +188,7 @@ It does not support gated models (like Llama 3) that require a Hugging Face Toke
 <p>Verify the model files exist in the bucket.</p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc rsh -n rhoai-model-vllm-lab deployment/minio ls -l /data/models-secure/ibm-granite/granite-4.0-micro</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc rsh -n rhoai-model-vllm-lab deployment/minio ls -l /data/models-secure/ibm-granite/granite-4-micro</code></pre>
 </div>
 </div>
 </li>
