@@ -9,13 +9,14 @@
 [.lead]
 *Click-Ops does not scale. GitOps does.*
 
-In the previous modules, we selected the **Granite-4 Micro** model and calculated the tuning parameters (`max-model-len=8192`) required to make it run safely on our hardware.
+In the previous modules, we selected the **Granite-4-micro** model and calculated the tuning parameters (`max-model-len=16000`) required to make it run safely on our hardware.
 Now, we must deploy it.
 
 You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo.
+
 But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?
 
-In this lab, we will deploy our tuned inference stack using a parameterized **Infrastructure-as-Code** script.
+In this lab, We will deploy our tuned inference stack using a parameterized **Infrastructure-as-Code** script.
 
 == Step 1: Get the Lab Materials
 
@@ -40,18 +41,19 @@ cd rhoai3-deploy
 ====
 If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
 Before proceeding, you must ensure the model is downloaded and the storage is configured.
+
 **xref:fast-track.adoc[Click here to run the Fast Track Setup Script]** to get your environment ready in 2 minutes.
 ====
 
 == Step 2: The Architecture
 
-Our script (`deploy/deploy-serve.sh`) automates the creation of two critical Kubernetes Custom Resources (CRs) in the `model-deploy-lab` namespace:
+Our script (`deploy/deploy-serve.sh`) automates the creation of two critical Kubernetes Custom Resources (CRs):
 
 1.  **The ServingRuntime (The Engine):**
     * Defines the *What* (vLLM image, port 8080).
-    * Defines the *How* (Tuning arguments like `max-model-len`).
+    * Defines the *How* (Tuning arguments like `max-model-len` and `gpu-memory-utilization`).
 2.  **The InferenceService (The Workload):**
-    * Binds the Engine to the Data Connection named `models` (Path: `granite4`).
+    * Binds the Engine to the Data Connection (S3).
     * Requests the specific hardware (1 NVIDIA GPU).
 
 == Step 3: Inspect the Automation
@@ -61,10 +63,9 @@ It is designed to be idempotent—you can run it ten times, and it will simply e
 .Key Configuration Block (deploy/deploy-serve.sh)
 [source,bash]
 ----
-NAMESPACE="model-deploy-lab"
 MODEL_NAME="granite-4-micro"
-MODEL_PATH="granite4" 
-CONTEXT_LIMIT="8192"  # Tuned for Micro footprint
+MODEL_PATH="ibm-granite/granite-4-micro"
+CONTEXT_LIMIT="16000"  # <--- Applying our sizing math from Module 2
 ----
 
 == Step 4: Execute the Deployment
@@ -93,10 +94,10 @@ Let's prove that our tuning parameters actually applied.
 [source,bash]
 ----
 oc get pod -l serving.kserve.io/inferenceservice=granite-4-micro \
-  -n model-deploy-lab \
+  -n rhoai-model-vllm-lab \
   -o jsonpath='{.items[0].spec.containers[0].args}'
 ----
-* *Verify:* Look for `"--max-model-len=8192"`. If this is present, your "Safety Valve" is active.
+* *Verify:* Look for `"--max-model-len=16000"`. If this is present, your "Safety Valve" is active.
 
 . **Test the API:**
 The script outputs a `curl` command. Run it to confirm the model is reasoning.
@@ -104,14 +105,14 @@ The script outputs a `curl` command. Run it to confirm the model is reasoning.
 [source,bash]
 ----
 # Get the URL dynamically
-export URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
+export URL=$(oc get inferenceservice granite-4-micro -n rhoai-model-vllm-lab -o jsonpath='{.status.url}')
 
 # Send a prompt
 curl -k $URL/v1/completions \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "granite-4-micro",
-    "prompt": "Write a haiku about GitOps.",
+    "prompt": "Define 'GitOps' in one sentence.",
     "max_tokens": 60
   }'
 ----
