@@ -4,8 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Lab: Automated Deployment (GitOps) :: Red Hat OpenShift AI (RHOAI) Enterprise Model Serving</title>
-    <link rel="prev" href="tuning-vllm.html">
-    <link rel="next" href="summary.html">
     <meta name="generator" content="Antora 3.1.3">
     <link rel="stylesheet" href="../../../_/css/site.css">
     <script>var uiRootPath = '../../../_'</script>
@@ -54,7 +52,7 @@
   <li class="nav-item" data-depth="1">
     <a class="nav-link" href="tuning-vllm.html">vLLM Tuning</a>
   </li>
-  <li class="nav-item is-current-page" data-depth="1">
+  <li class="nav-item" data-depth="1">
     <a class="nav-link" href="model-serving.html">Deploy a Model</a>
   </li>
   <li class="nav-item" data-depth="1">
@@ -91,7 +89,7 @@
 <nav class="breadcrumbs" aria-label="breadcrumbs">
   <ul>
     <li><a href="../index.html">Red Hat OpenShift AI (RHOAI) Enterprise Model Serving</a></li>
-    <li><a href="model-serving.html">Deploy a Model</a></li>
+    <li><a href="model-serving%20copy.html">Lab: Automated Deployment (GitOps)</a></li>
   </ul>
 </nav>
 </div>
@@ -107,15 +105,17 @@
 <p><strong>Click-Ops does not scale. GitOps does.</strong></p>
 </div>
 <div class="paragraph">
-<p>In the previous modules, we selected the <strong>Granite-4 Micro</strong> model and calculated the tuning parameters (<code>max-model-len=8192</code>) required to make it run safely on our hardware.
+<p>In the previous modules, we selected the <strong>Granite-4-micro</strong> model and calculated the tuning parameters (<code>max-model-len=16000</code>) required to make it run safely on our hardware.
 Now, we must deploy it.</p>
 </div>
 <div class="paragraph">
-<p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo.
-But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?</p>
+<p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo.</p>
 </div>
 <div class="paragraph">
-<p>In this lab, we will deploy our tuned inference stack using a parameterized <strong>Infrastructure-as-Code</strong> script.</p>
+<p>But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?</p>
+</div>
+<div class="paragraph">
+<p>In this lab, We will deploy our tuned inference stack using a parameterized <strong>Infrastructure-as-Code</strong> script.</p>
 </div>
 </div>
 </div>
@@ -158,8 +158,10 @@ But what happens when you need to deploy 50 models? Or when you need to update t
 <div class="title">Are you catching up?</div>
 <div class="paragraph">
 <p>If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
-Before proceeding, you must ensure the model is downloaded and the storage is configured.
-<strong><a href="fast-track.html" class="xref page">Click here to run the Fast Track Setup Script</a></strong> to get your environment ready in 2 minutes.</p>
+Before proceeding, you must ensure the model is downloaded and the storage is configured.</p>
+</div>
+<div class="paragraph">
+<p><strong><a href="fast-track.html" class="xref page">Click here to run the Fast Track Setup Script</a></strong> to get your environment ready in 2 minutes.</p>
 </div>
 </td>
 </tr>
@@ -171,7 +173,7 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <h2 id="_step_2_the_architecture"><a class="anchor" href="#_step_2_the_architecture"></a>Step 2: The Architecture</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Our script (<code>deploy/deploy-serve.sh</code>) automates the creation of two critical Kubernetes Custom Resources (CRs) in the <code>model-deploy-lab</code> namespace:</p>
+<p>Our script (<code>deploy/deploy-serve.sh</code>) automates the creation of two critical Kubernetes Custom Resources (CRs):</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
@@ -183,7 +185,7 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <p>Defines the <strong>What</strong> (vLLM image, port 8080).</p>
 </li>
 <li>
-<p>Defines the <strong>How</strong> (Tuning arguments like <code>max-model-len</code>).</p>
+<p>Defines the <strong>How</strong> (Tuning arguments like <code>max-model-len</code> and <code>gpu-memory-utilization</code>).</p>
 </li>
 </ul>
 </div>
@@ -193,7 +195,7 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <div class="ulist">
 <ul>
 <li>
-<p>Binds the Engine to the Data Connection named <code>models</code> (Path: <code>granite4</code>).</p>
+<p>Binds the Engine to the Data Connection (S3).</p>
 </li>
 <li>
 <p>Requests the specific hardware (1 NVIDIA GPU).</p>
@@ -214,10 +216,9 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <div class="listingblock">
 <div class="title">Key Configuration Block (deploy/deploy-serve.sh)</div>
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAMESPACE="model-deploy-lab"
-MODEL_NAME="granite-4-micro"
-MODEL_PATH="granite4"
-CONTEXT_LIMIT="8192"  # Tuned for Micro footprint</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">MODEL_NAME="granite-4-micro"
+MODEL_PATH="ibm-granite/granite-4-micro"
+CONTEXT_LIMIT="16000"  # &lt;--- Applying our sizing math from Module 2</code></pre>
 </div>
 </div>
 </div>
@@ -273,14 +274,14 @@ CONTEXT_LIMIT="8192"  # Tuned for Micro footprint</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pod -l serving.kserve.io/inferenceservice=granite-4-micro \
-  -n model-deploy-lab \
+  -n rhoai-model-vllm-lab \
   -o jsonpath='{.items[0].spec.containers[0].args}'</code></pre>
 </div>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Verify:</strong> Look for <code>"--max-model-len=8192"</code>. If this is present, your "Safety Valve" is active.</p>
+<p><strong>Verify:</strong> Look for <code>"--max-model-len=16000"</code>. If this is present, your "Safety Valve" is active.</p>
 </li>
 </ul>
 </div>
@@ -291,14 +292,14 @@ The script outputs a <code>curl</code> command. Run it to confirm the model is r
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Get the URL dynamically
-export URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
+export URL=$(oc get inferenceservice granite-4-micro -n rhoai-model-vllm-lab -o jsonpath='{.status.url}')
 
 # Send a prompt
 curl -k $URL/v1/completions \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "granite-4-micro",
-    "prompt": "Write a haiku about GitOps.",
+    "prompt": "Define 'GitOps' in one sentence.",
     "max_tokens": 60
   }'</code></pre>
 </div>
@@ -311,10 +312,6 @@ curl -k $URL/v1/completions \
 </div>
 </div>
 </div>
-<nav class="pagination">
-  <span class="prev"><a href="tuning-vllm.html">vLLM Tuning</a></span>
-  <span class="next"><a href="summary.html">Summary</a></span>
-</nav>
 </article>
   </div>
 </main>
