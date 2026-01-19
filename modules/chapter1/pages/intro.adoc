@@ -60,7 +60,7 @@ To practice these concepts without requiring a massive GPU cluster, we will stan
 
 * **Why this model?**
 
-    * **Efficiency:** Its small size (2 Billion parameters) allows us to deploy it quickly and experiment with tuning parameters on standard hardware.
+    * **Efficiency:** Its small size (3 Billion parameters) allows us to deploy it quickly and experiment with tuning parameters on standard hardware.
     * **Modern Architecture:** It uses the same underlying technology as massive 70B+ models, meaning the sizing and tuning lessons you learn here directly apply to enterprise-scale deployments.
     * **Transparency:** It is fully open-source (Apache 2.0) with disclosed training data, representing the gold standard for trusted enterprise AI.
 
