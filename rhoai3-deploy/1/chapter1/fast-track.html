@@ -165,22 +165,6 @@ It does not support gated models (like Llama 3) that require a Hugging Face Toke
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p><strong>Check the Data Connection:</strong></p>
-<div class="ulist">
-<ul>
-<li>
-<p>Open the <strong>RHOAI Dashboard</strong>.</p>
-</li>
-<li>
-<p>Go to <strong>Settings</strong> &#8594; <strong>Data Connections</strong>.</p>
-</li>
-<li>
-<p>Ensure <code>aws-connection-minio</code> is listed.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
 <p><strong>Check the Artifact:</strong></p>
 <div class="ulist">
 <ul>
@@ -188,7 +172,7 @@ It does not support gated models (like Llama 3) that require a Hugging Face Toke
 <p>Verify the model files exist in the bucket.</p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc rsh -n rhoai-model-vllm-lab deployment/minio ls -l /data/models-secure/ibm-granite/granite-4-micro</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc rsh -n model-deploy-lab deployment/minio ls -l /data/models/granite4</code></pre>
 </div>
 </div>
 </li>
