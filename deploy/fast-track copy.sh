@@ -2,7 +2,7 @@
 
 # =================================================================================
 # SCRIPT: fast-track.sh
-# DESCRIPTION: "The Emergency Button." 
+# DESCRIPTION: "The Catchup Button." 
 #              Sets up (Serving) prerequisites for users who skipped.
 #              1. Deploys MinIO (The Vault).
 #              2. Creates the RHOAI Data Connection.
@@ -37,23 +37,15 @@ else
 fi
 
 # Check MinIO
-if ! oc get deployment minio -n "$NAMESPACE" > /dev/null 2>&1; then
-    echo "➤ Deploying MinIO..."
+oc get deployment minio -n "$NAMESPACE" > /dev/null 2>&1; then
+    echo "➤ Deploying MinIO Object Storage..."
     # We assume the user has the repo. If not, we could embed YAML here.
     if [ -d "deploy/infrastructure/minio" ]; then
         oc apply -f deploy/infrastructure/minio/ -n "$NAMESPACE"
     else
-        echo "⚠️  MinIO folder not found. Attempting inline deployment..."
-        # Fallback inline deployment for robustness
-        oc new-app minio/minio:RELEASE.2024-01-31T20-20-33Z \
-            -e MINIO_ROOT_USER=$MINIO_ACCESS_KEY \
-            -e MINIO_ROOT_PASSWORD=$MINIO_SECRET_KEY \
-            --name=minio -n "$NAMESPACE"
-        oc set probe dc/minio --liveness --readiness -- get-url=http://:9000/minio/health/live
+            echo "❌ Error: MinIO YAML directory not found!"
+    exit 1
     fi
-else
-    echo "✔ MinIO is already running."
-fi
 
 # ---------------------------------------------------------------------------------
 # 2. Data Connection (The Wiring)
@@ -72,6 +64,7 @@ oc create secret generic aws-connection-minio \
     --dry-run=client -o yaml | \
     oc apply -f -
 
+# Apply the label to make it visible in the RHOAI Dashboard
 oc label secret aws-connection-minio \
     "opendatahub.io/dashboard=true" \
     -n "$NAMESPACE" \

@@ -28,7 +28,7 @@ It does not support gated models (like Llama 3) that require a Hugging Face Toke
 +
 [source,bash]
 ----
-chmod +x deploy/fast-track.sh
+chmod u+x deploy/fast-track.sh
 ./deploy/fast-track.sh
 ----
 
