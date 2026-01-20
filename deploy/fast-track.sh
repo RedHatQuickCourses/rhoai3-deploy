@@ -38,10 +38,14 @@ else
 fi
 
 # Deploy MinIO if missing
-echo "Step 2: Deploying MinIO Object Storage (The Vault)..."
+echo "➤ Deploying MinIO Object Storage (The Vault)..."
 # We apply the folder containing Deployment, PVC, Service, and Route
 if [ -d "deploy/infrastructure/minio" ]; then
     oc apply -f deploy/infrastructure/minio/ -n "$NAMESPACE"
+    echo "⏳ Waiting for MinIO to be ready..."
+    oc wait --for=condition=available deployment/minio -n "$NAMESPACE" --timeout=300s || {
+        echo "⚠️  MinIO deployment not ready after 5 minutes, continuing anyway..."
+    }
 else
     echo "❌ Error: MinIO YAML directory not found!"
     exit 1
@@ -53,7 +57,8 @@ fi
 echo "----------------------------------------------------------------"
 echo "Step 2: Wiring RHOAI Data Connection..."
 
-# The Secret Name is now 'models' as requested
+# Create the secret with all required fields for OpenShift AI Data Connection
+# Using dry-run and apply pattern to ensure idempotency
 oc create secret generic models \
     --from-literal=AWS_ACCESS_KEY_ID="$MINIO_ACCESS_KEY" \
     --from-literal=AWS_SECRET_ACCESS_KEY="$MINIO_SECRET_KEY" \
@@ -64,12 +69,19 @@ oc create secret generic models \
     --dry-run=client -o yaml | \
     oc apply -f -
 
+# Apply the label to make it visible in the RHOAI Dashboard
 oc label secret models \
     "opendatahub.io/dashboard=true" \
     -n "$NAMESPACE" \
     --overwrite
 
-echo "✔ Data Connection 'models' created."
+# Verify the secret was created correctly
+if oc get secret models -n "$NAMESPACE" > /dev/null 2>&1; then
+    echo "✔ Data Connection 'models' created and labeled for OpenShift AI Dashboard."
+else
+    echo "❌ Error: Failed to create data connection secret!"
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------------
 # 3. The Ingestion Job (The Loader)
@@ -167,4 +179,27 @@ spec:
           name: fast-track-code
 YAML
 
-echo "⏳ Job submitted. Run 'oc logs job/fast-track-loader -n $NAMESPACE -f' to monitor."
+echo "⏳ Job submitted. Waiting for model download and upload to complete..."
+echo "   This may take 5-15 minutes depending on model size and network speed..."
+
+# Wait for the job to complete with a generous timeout for large model downloads
+# Granite 4.0-micro is ~2GB, so we allow up to 20 minutes
+TIMEOUT=1200  # 20 minutes in seconds
+if oc wait --for=condition=complete job/fast-track-loader -n "$NAMESPACE" --timeout=${TIMEOUT}s; then
+    echo "✅ Job completed successfully!"
+    echo ""
+    echo "📊 Job logs:"
+    oc logs job/fast-track-loader -n "$NAMESPACE" --tail=20
+    echo ""
+    echo "✅ Model is now available in MinIO at s3://$S3_BUCKET/$S3_FOLDER"
+else
+    echo "❌ Job failed or timed out after ${TIMEOUT} seconds."
+    echo "📊 Checking job status:"
+    oc get job fast-track-loader -n "$NAMESPACE"
+    echo ""
+    echo "📊 Recent job logs:"
+    oc logs job/fast-track-loader -n "$NAMESPACE" --tail=50 || echo "No logs available yet."
+    echo ""
+    echo "💡 To monitor manually, run: oc logs job/fast-track-loader -n $NAMESPACE -f"
+    exit 1
+fi
