@@ -47,21 +47,23 @@ apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
 metadata:
   name: vllm-runtime
+  annotations:
+    openshift.io/display-name: vLLM (NVIDIA GPU)
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
   labels:
     opendatahub.io/dashboard: "true"
 spec:
-  annotations:
-    prometheus.io/path: /metrics
-    prometheus.io/port: "8080"
+  supportedModelFormats:
+    - name: vLLM
+      autoSelect: true
   containers:
     - name: kserve-container
-      image: quay.io/modh/vllm:rhoai-2.13
+      image: quay.io/modh/vllm:rhoai-2.21-cuda
       command: ["python", "-m", "vllm.entrypoints.openai.api_server"]
       args:
         - "--port=8080"
         - "--model=/mnt/models"
-        - "--served-model-name=$MODEL_NAME"
-        - "--distributed-executor-backend=mp"
+        - "--served-model-name={{.Name}}"
       env:
         - name: HF_HOME
           value: /tmp/hf_home
@@ -70,16 +72,9 @@ spec:
           protocol: TCP
       resources:
         requests:
-          cpu: "2"
-          memory: "4Gi"
-        limits:
-          cpu: "4"
-          memory: "8Gi"
           nvidia.com/gpu: "1"
-  multiModel: false
-  supportedModelFormats:
-    - autoSelect: true
-      name: vLLM
+        limits:
+          nvidia.com/gpu: "1"
 EOF
 
 # ---------------------------------------------------------------------------------
@@ -110,12 +105,12 @@ spec:
         - "--gpu-memory-utilization=0.90" 
       resources:
         requests:
-          cpu: "2"
-          memory: "4Gi"
-          nvidia.com/gpu: "1"
-        limits:
           cpu: "4"
           memory: "8Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: "16Gi"
           nvidia.com/gpu: "1" 
 EOF
 
