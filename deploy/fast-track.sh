@@ -57,8 +57,25 @@ fi
 echo "----------------------------------------------------------------"
 echo "Step 2: Wiring RHOAI Data Connection..."
 
-# Create the secret with all required fields for OpenShift AI Data Connection
-# Using dry-run and apply pattern to ensure idempotency
+# Create storage-config secret (required by KServe for InferenceService deployments)
+# This is the secret name that KServe webhook expects
+oc create secret generic storage-config \
+    --from-literal=AWS_ACCESS_KEY_ID="$MINIO_ACCESS_KEY" \
+    --from-literal=AWS_SECRET_ACCESS_KEY="$MINIO_SECRET_KEY" \
+    --from-literal=AWS_S3_ENDPOINT="http://minio-service.$NAMESPACE.svc.cluster.local:9000" \
+    --from-literal=AWS_DEFAULT_REGION="us-east-1" \
+    --from-literal=AWS_S3_BUCKET="$S3_BUCKET" \
+    -n "$NAMESPACE" \
+    --dry-run=client -o yaml | \
+    oc apply -f -
+
+# Apply the label to make it visible in the RHOAI Dashboard
+oc label secret storage-config \
+    "opendatahub.io/dashboard=true" \
+    -n "$NAMESPACE" \
+    --overwrite
+
+# Also create 'models' secret for the ingestion job (backward compatibility)
 oc create secret generic models \
     --from-literal=AWS_ACCESS_KEY_ID="$MINIO_ACCESS_KEY" \
     --from-literal=AWS_SECRET_ACCESS_KEY="$MINIO_SECRET_KEY" \
@@ -75,11 +92,15 @@ oc label secret models \
     -n "$NAMESPACE" \
     --overwrite
 
-# Verify the secret was created correctly
-if oc get secret models -n "$NAMESPACE" > /dev/null 2>&1; then
-    echo "✔ Data Connection 'models' created and labeled for OpenShift AI Dashboard."
+# Verify the secrets were created correctly
+if oc get secret storage-config -n "$NAMESPACE" > /dev/null 2>&1 && \
+   oc get secret models -n "$NAMESPACE" > /dev/null 2>&1; then
+    echo "✔ Data Connection secrets created:"
+    echo "   - 'storage-config' (for KServe InferenceService)"
+    echo "   - 'models' (for ingestion jobs)"
+    echo "   Both are labeled for OpenShift AI Dashboard visibility."
 else
-    echo "❌ Error: Failed to create data connection secret!"
+    echo "❌ Error: Failed to create data connection secrets!"
     exit 1
 fi
 

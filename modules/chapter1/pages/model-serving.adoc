@@ -73,7 +73,7 @@ CONTEXT_LIMIT="8192"  # Tuned for Micro footprint
 +
 [source,bash]
 ----
-chmod +x deploy/deploy-serve.sh
+chmod u+x deploy/deploy-serve.sh
 ./deploy/deploy-serve.sh
 ----
 . **Watch the Output:**

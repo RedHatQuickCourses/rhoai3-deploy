@@ -12,7 +12,8 @@ NAMESPACE="model-deploy-lab"
 MODEL_NAME="granite-4-micro"
 # Path must match the S3 Folder used in fast-track.sh
 MODEL_PATH="granite4" 
-DATA_CONNECTION="models"
+# Use storage-config as this is what KServe webhook expects
+DATA_CONNECTION="storage-config"
 CONTEXT_LIMIT="8192" # Tuned for Micro/Small GPU footprint
 
 echo "🚀 Deploying Model: $MODEL_NAME"
@@ -23,9 +24,18 @@ echo "📏 Enforcing Context Limit: $CONTEXT_LIMIT tokens"
 # ---------------------------------------------------------------------------------
 if ! oc get secret "$DATA_CONNECTION" -n "$NAMESPACE" > /dev/null 2>&1; then
     echo "❌ Error: Data Connection '$DATA_CONNECTION' not found in '$NAMESPACE'."
-    echo "   Run fast-track.sh first."
+    echo "   Run fast-track.sh first to create the storage-config secret."
     exit 1
 fi
+
+# Verify the secret has required keys
+echo "➤ Verifying storage secret configuration..."
+REQUIRED_KEYS=("AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_S3_ENDPOINT" "AWS_S3_BUCKET")
+for KEY in "${REQUIRED_KEYS[@]}"; do
+    if ! oc get secret "$DATA_CONNECTION" -n "$NAMESPACE" -o jsonpath="{.data.$KEY}" > /dev/null 2>&1; then
+        echo "⚠️  Warning: Secret '$DATA_CONNECTION' missing key '$KEY'"
+    fi
+done
 
 # ---------------------------------------------------------------------------------
 # 1. Define the Serving Runtime (The Engine)
