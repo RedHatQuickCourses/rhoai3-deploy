@@ -91,13 +91,17 @@ metadata:
     serving.kserve.io/deploymentMode: RawDeployment
 spec:
   predictor:
-    model:
-      modelFormat:
-        name: vLLM
-      runtime: vllm-runtime
-      storage:
-        key: $DATA_CONNECTION
-        path: $MODEL_PATH
+      model:
+        modelFormat:
+          name: vLLM
+        runtime: vllm-runtime
+        # --- ADD THIS BLOCK ---
+        storageUri: "s3://models/granite4"  # Direct URI path
+        # ----------------------
+      
+      # --- ADD SERVICE ACCOUNT ---
+      serviceAccountName: granite-sa
+      # ---------------------------
       # 🛠️ PERFORMANCE TUNING 🛠️
       args:
         - "--dtype=float16"
@@ -113,6 +117,8 @@ spec:
           memory: "16Gi"
           nvidia.com/gpu: "1" 
 EOF
+
+
 
 # ---------------------------------------------------------------------------------
 # 3. Wait for Readiness
