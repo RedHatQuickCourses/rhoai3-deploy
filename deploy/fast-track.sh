@@ -38,15 +38,13 @@ else
 fi
 
 # Deploy MinIO if missing
-if ! oc get deployment minio -n "$NAMESPACE" > /dev/null 2>&1; then
-    echo "➤ Deploying MinIO..."
-    oc new-app minio/minio:quay.io/minio/minio:latest \
-        -e MINIO_ROOT_USER=$MINIO_ACCESS_KEY \
-        -e MINIO_ROOT_PASSWORD=$MINIO_SECRET_KEY \
-        --name=minio -n "$NAMESPACE"
-    oc set probe dc/minio --liveness --readiness -- get-url=http://:9000/minio/health/live
+echo "Step 2: Deploying MinIO Object Storage (The Vault)..."
+# We apply the folder containing Deployment, PVC, Service, and Route
+if [ -d "deploy/infrastructure/minio" ]; then
+    oc apply -f deploy/infrastructure/minio/ -n "$NAMESPACE"
 else
-    echo "✔ MinIO is already running."
+    echo "❌ Error: MinIO YAML directory not found!"
+    exit 1
 fi
 
 # ---------------------------------------------------------------------------------
