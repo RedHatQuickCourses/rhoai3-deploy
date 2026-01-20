@@ -69,9 +69,11 @@ oc create secret generic storage-config \
     --dry-run=client -o yaml | \
     oc apply -f -
 
-# Apply the label to make it visible in the RHOAI Dashboard
+# Apply the labels to make it visible in the RHOAI Dashboard
+# Both dashboard=true and managed=true are required for visibility
 oc label secret storage-config \
     "opendatahub.io/dashboard=true" \
+    "opendatahub.io/managed=true" \
     -n "$NAMESPACE" \
     --overwrite
 
@@ -86,9 +88,10 @@ oc create secret generic models \
     --dry-run=client -o yaml | \
     oc apply -f -
 
-# Apply the label to make it visible in the RHOAI Dashboard
+# Apply the labels to make it visible in the RHOAI Dashboard
 oc label secret models \
     "opendatahub.io/dashboard=true" \
+    "opendatahub.io/managed=true" \
     -n "$NAMESPACE" \
     --overwrite
 
