@@ -36,17 +36,12 @@ chmod u+x deploy/fast-track.sh
 
 Once the script completes (look for `✅ SUCCESS`), verify the environment is ready for serving:
 
-. **Check the Data Connection:**
-* Open the **RHOAI Dashboard**.
-* Go to **Settings** -> **Data Connections**.
-* Ensure `aws-connection-minio` is listed.
-
 . **Check the Artifact:**
 * Verify the model files exist in the bucket.
 +
 [source,bash]
 ----
-oc rsh -n rhoai-model-vllm-lab deployment/minio ls -l /data/models-secure/ibm-granite/granite-4-micro
+oc rsh -n model-deploy-lab deployment/minio ls -l /data/models/granite4 
 ----
 
 xref:model-serving.adoc[Return to the Serving Lab]
