@@ -40,7 +40,7 @@ fi
 # Deploy MinIO if missing
 if ! oc get deployment minio -n "$NAMESPACE" > /dev/null 2>&1; then
     echo "➤ Deploying MinIO..."
-    oc new-app minio/minio:RELEASE.2024-01-31T20-20-33Z \
+    oc new-app minio/minio:quay.io/minio/minio:latest \
         -e MINIO_ROOT_USER=$MINIO_ACCESS_KEY \
         -e MINIO_ROOT_PASSWORD=$MINIO_SECRET_KEY \
         --name=minio -n "$NAMESPACE"
