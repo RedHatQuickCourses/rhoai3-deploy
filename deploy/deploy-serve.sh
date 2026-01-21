@@ -2,18 +2,19 @@
 
 # =================================================================================
 # SCRIPT: deploy-serve.sh
-# DESCRIPTION: "Mirror Match" Deployment.
-#              Replicates the EXACT configuration found in the working UI deployment.
+# DESCRIPTION: Production Deployment for RHOAI Course.
+#              - Defines its own Runtime (Reliability)
+#              - Uses Red Hat Cached Images (Speed)
+#              - Uses Explicit Secret Wiring (Security)
 # =================================================================================
 
 set -e
 
-# --- CONFIGURATION (Matched to UI Logs) ---
+# --- CONFIGURATION ---
 NAMESPACE="model-deploy-lab"
 MODEL_NAME="granite-4-micro"
 SERVICE_ACCOUNT="models-sa"
-# UI used 'models' as the secret name, so we must too.
-SECRET_NAME="models"
+SECRET_NAME="models"    # Matches UI convention
 BUCKET_NAME="models"
 MODEL_PATH="granite4" 
 
@@ -22,29 +23,25 @@ ACCESS_KEY="minio"
 SECRET_KEY="minio123"
 
 # --- 1. DETECT MINIO (Internal Service) ---
-# The UI used: http://minio-service.model-deploy-lab.svc.cluster.local:9000
-# We auto-detect this to be safe, but default to the UI's known working value.
-echo "🔍 Verifying MinIO Service..."
+# We auto-detect the internal service name to prevent DNS errors.
 if oc get svc minio-service -n $NAMESPACE >/dev/null 2>&1; then
     MINIO_HOST="minio-service.${NAMESPACE}.svc.cluster.local"
-    echo "   ✔ Found Service: minio-service (Matches UI)"
 else
-    # Fallback if the lab setup varies slightly
     MINIO_HOST="minio.${NAMESPACE}.svc.cluster.local"
-    echo "   ⚠️  'minio-service' not found. Using '$MINIO_HOST'"
 fi
 MINIO_ENDPOINT="http://${MINIO_HOST}:9000"
+echo "🔍 Using Storage Endpoint: $MINIO_ENDPOINT"
 
-# --- 2. CLEANUP ---
-echo "🧹 Cleaning up previous attempts..."
+# --- 2. CLEANUP (Fresh Start) ---
+echo "🧹 Cleaning previous deployments..."
 oc delete inferenceservice $MODEL_NAME -n $NAMESPACE --ignore-not-found
+oc delete servingruntime vllm-runtime -n $NAMESPACE --ignore-not-found
 oc delete secret $SECRET_NAME -n $NAMESPACE --ignore-not-found
 oc delete sa $SERVICE_ACCOUNT -n $NAMESPACE --ignore-not-found
 
-# --- 3. CREATE SECRET (The UI Way: Env Vars) ---
-echo "➤ Creating Secret '$SECRET_NAME'..."
-
-# We reproduce the EXACT keys found in your 'decoded secret' logs.
+# --- 3. CREATE SECRET (Env Var Format) ---
+echo "➤ Creating Storage Secret..."
+# We use the explicit keys found in the UI logs.
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: v1
 kind: Secret
@@ -54,7 +51,6 @@ metadata:
     opendatahub.io/dashboard: "true"
     opendatahub.io/managed: "true"
   annotations:
-    # This annotation is the 'Glue' that lets KServe find the secret for this endpoint
     serving.kserve.io/s3-endpoint: "$MINIO_HOST:9000"
 type: Opaque
 stringData:
@@ -66,15 +62,15 @@ stringData:
 EOF
 
 # --- 4. CONFIGURE SERVICE ACCOUNT ---
-echo "➤ Configuring Service Account '$SERVICE_ACCOUNT'..."
+echo "➤ Configuring Service Account..."
 oc create sa "$SERVICE_ACCOUNT" -n "$NAMESPACE"
 oc secrets link "$SERVICE_ACCOUNT" "$SECRET_NAME" -n "$NAMESPACE" --for=pull,mount
 
-# --- 5. DEFINE RUNTIME (Cached Image) ---
-# Using the Red Hat image you found in the logs to ensure speed.
-VLLM_IMAGE="registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:ad756c01ec99a99cc7d93401c41b8d92ca96fb1ab7c5262919d818f2be4f3768"
+# --- 5. DEFINE RUNTIME (Local Definition = Guaranteed Start) ---
+# We define the runtime HERE so we don't depend on global templates matching specific names.
+# We use the Red Hat image you successfully pulled earlier.
+echo "➤ Registering Local vLLM Runtime..."
 
-echo "➤ Registering Runtime..."
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
@@ -89,7 +85,8 @@ spec:
       autoSelect: true
   containers:
     - name: kserve-container
-      image: $VLLM_IMAGE
+      # THE GOLDEN IMAGE (Red Hat Cached)
+      image: registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:ad756c01ec99a99cc7d93401c41b8d92ca96fb1ab7c5262919d818f2be4f3768
       command: ["python", "-m", "vllm.entrypoints.openai.api_server"]
       args:
         - "--port=8080"
@@ -109,7 +106,7 @@ spec:
 EOF
 
 # --- 6. DEPLOY INFERENCE SERVICE ---
-echo "➤ Deploying Model (Mirroring UI Config)..."
+echo "➤ Deploying Model..."
 
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: serving.kserve.io/v1beta1
@@ -126,12 +123,14 @@ spec:
     model:
       modelFormat:
         name: vLLM
+      
+      # Points to the LOCAL runtime we just defined above (Guaranteed to exist)
       runtime: vllm-runtime
       
-      # 🛠️ EXACT MATCH TO YOUR UI LOGS 🛠️
+      # EXPLICIT WIRING (Matches UI logs)
       storage:
-        key: $SECRET_NAME   # "models"
-        path: $MODEL_PATH   # "granite4"
+        key: $SECRET_NAME
+        path: $MODEL_PATH
       
       args:
         - "--dtype=float16"
