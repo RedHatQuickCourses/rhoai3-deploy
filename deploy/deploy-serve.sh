@@ -2,8 +2,8 @@
 
 # =================================================================================
 # SCRIPT: deploy-serve.sh
-# DESCRIPTION: Deploys a vLLM-based InferenceService using the RHOAI Global Runtime.
-#              (Matches UI performance by using cached images and optimized profile)
+# DESCRIPTION: Deploys a vLLM InferenceService using the Cached Red Hat Image.
+#              (Self-contained: Creates SA, Runtime, and Service)
 # =================================================================================
 
 set -e
@@ -11,16 +11,20 @@ set -e
 # --- CONFIGURATION ---
 NAMESPACE="model-deploy-lab"
 MODEL_NAME="granite-4-micro"
-SERVICE_ACCOUNT="models-sa" 
+SERVICE_ACCOUNT="models-sa"
 SECRET_NAME="storage-config"
 MODEL_URI="s3://models/granite4"
+
+# ⚡ FAST IMAGE: This is the exact image from your successful UI deployment
+# It is likely cached on the nodes, ensuring 3-minute startup times.
+VLLM_IMAGE="registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:ad756c01ec99a99cc7d93401c41b8d92ca96fb1ab7c5262919d818f2be4f3768"
 
 echo "🚀 Deploying Model: $MODEL_NAME"
 
 # ---------------------------------------------------------------------------------
-# 1. Security Setup
+# 1. Security Setup (Service Account)
 # ---------------------------------------------------------------------------------
-echo "➤ Configuring Service Account & Permissions..."
+echo "➤ Configuring Service Account..."
 
 # Create SA if missing
 if ! oc get sa "$SERVICE_ACCOUNT" -n "$NAMESPACE" > /dev/null 2>&1; then
@@ -32,12 +36,50 @@ oc secrets link "$SERVICE_ACCOUNT" "$SECRET_NAME" -n "$NAMESPACE" --for=pull,mou
 echo "   ✔ Linked secret to Service Account"
 
 # ---------------------------------------------------------------------------------
-# 2. Deploy the Inference Service
+# 2. Define the Runtime (The Engine)
+# ---------------------------------------------------------------------------------
+echo "➤ Configuring Cached vLLM Runtime..."
+
+# We EXPLICITLY define this to avoid "Runtime not found" errors.
+# We use the Red Hat image to avoid "10-minute download" delays.
+
+cat <<EOF | oc apply -n $NAMESPACE -f -
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-runtime
+  annotations:
+    openshift.io/display-name: vLLM (NVIDIA GPU)
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+spec:
+  supportedModelFormats:
+    - name: vLLM
+      autoSelect: true
+  containers:
+    - name: kserve-container
+      image: $VLLM_IMAGE
+      command: ["python", "-m", "vllm.entrypoints.openai.api_server"]
+      args:
+        - "--port=8080"
+        - "--model=/mnt/models"
+        - "--served-model-name={{.Name}}"
+      env:
+        - name: HF_HOME
+          value: /tmp/hf_home
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+        limits:
+          nvidia.com/gpu: "1"
+EOF
+
+# ---------------------------------------------------------------------------------
+# 3. Deploy the Inference Service (The Application)
 # ---------------------------------------------------------------------------------
 echo "➤ Creating InferenceService..."
-
-# NOTE: We removed the 'ServingRuntime' definition block. 
-# We will point to the existing Global Runtime ('vllm') instead.
 
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: serving.kserve.io/v1beta1
@@ -52,33 +94,29 @@ spec:
     model:
       modelFormat:
         name: vLLM
-      
-      # USE THE GLOBAL RUNTIME (Matches UI Behavior)
-      # This uses the cached 'registry.redhat.io' image instead of pulling a new one
-      runtime: vllm 
-      
+      runtime: vllm-runtime  # Points to the local runtime we just created above
       storageUri: "$MODEL_URI"
       
+      # 🛠️ ARGUMENTS MATCHING UI 🛠️
       args:
         - "--dtype=float16"
         - "--max-model-len=8192" 
         - "--gpu-memory-utilization=0.90" 
       
-      # MATCHING UI RESOURCE PROFILE
-      # Lower requests = Faster scheduling on busy clusters
+      # 🛠️ RESOURCES MATCHING UI 🛠️
       resources:
         requests:
-          cpu: "2"          # UI used 2, Script used 4
-          memory: "6Gi"     # UI used 6Gi, Script used 8Gi
+          cpu: "2"
+          memory: "6Gi"
           nvidia.com/gpu: "1"
         limits:
           cpu: "4"
-          memory: "14Gi"    # Matches UI limit
+          memory: "14Gi"
           nvidia.com/gpu: "1" 
 EOF
 
 # ---------------------------------------------------------------------------------
-# 3. Wait for Readiness
+# 4. Wait for Readiness
 # ---------------------------------------------------------------------------------
 echo "⏳ Deployment submitted. Waiting for Model to Load..."
 
