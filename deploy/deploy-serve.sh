@@ -2,90 +2,79 @@
 
 # =================================================================================
 # SCRIPT: deploy-serve.sh
-# DESCRIPTION: Production Deployment (Auto-Detects Storage & Fixes Permissions)
+# DESCRIPTION: "Mirror Match" Deployment.
+#              Replicates the EXACT configuration found in the working UI deployment.
 # =================================================================================
 
 set -e
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (Matched to UI Logs) ---
 NAMESPACE="model-deploy-lab"
 MODEL_NAME="granite-4-micro"
 SERVICE_ACCOUNT="models-sa"
-SECRET_NAME="storage-config"
+# UI used 'models' as the secret name, so we must too.
+SECRET_NAME="models"
 BUCKET_NAME="models"
-MODEL_PATH="granite4" # Folder inside the bucket
+MODEL_PATH="granite4" 
 
-# --- CREDENTIALS (MUST MATCH FAST-TRACK) ---
+# --- CREDENTIALS ---
 ACCESS_KEY="minio"
 SECRET_KEY="minio123"
 
-# --- AUTO-DETECT MINIO SERVICE ---
-# We look for a service named 'minio' or 'minio-service' to avoid DNS errors.
-echo "🔍 Detecting MinIO Service..."
-if oc get svc minio -n $NAMESPACE >/dev/null 2>&1; then
-    MINIO_HOST="minio.${NAMESPACE}.svc.cluster.local"
-    echo "   ✔ Found Service: minio"
-elif oc get svc minio-service -n $NAMESPACE >/dev/null 2>&1; then
+# --- 1. DETECT MINIO (Internal Service) ---
+# The UI used: http://minio-service.model-deploy-lab.svc.cluster.local:9000
+# We auto-detect this to be safe, but default to the UI's known working value.
+echo "🔍 Verifying MinIO Service..."
+if oc get svc minio-service -n $NAMESPACE >/dev/null 2>&1; then
     MINIO_HOST="minio-service.${NAMESPACE}.svc.cluster.local"
-    echo "   ✔ Found Service: minio-service"
+    echo "   ✔ Found Service: minio-service (Matches UI)"
 else
-    echo "   ⚠️  Could not auto-detect MinIO service. Defaulting to 'minio-service'."
-    MINIO_HOST="minio-service.${NAMESPACE}.svc.cluster.local"
+    # Fallback if the lab setup varies slightly
+    MINIO_HOST="minio.${NAMESPACE}.svc.cluster.local"
+    echo "   ⚠️  'minio-service' not found. Using '$MINIO_HOST'"
 fi
-
-# Internal URL (HTTP) is faster and safer for pods than the external HTTPS route
 MINIO_ENDPOINT="http://${MINIO_HOST}:9000"
-echo "   ➤ Using Storage Endpoint: $MINIO_ENDPOINT"
 
-# --- RHOAI OPTIMIZED IMAGE ---
-VLLM_IMAGE="registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:ad756c01ec99a99cc7d93401c41b8d92ca96fb1ab7c5262919d818f2be4f3768"
+# --- 2. CLEANUP ---
+echo "🧹 Cleaning up previous attempts..."
+oc delete inferenceservice $MODEL_NAME -n $NAMESPACE --ignore-not-found
+oc delete secret $SECRET_NAME -n $NAMESPACE --ignore-not-found
+oc delete sa $SERVICE_ACCOUNT -n $NAMESPACE --ignore-not-found
 
-echo "🚀 Starting Deployment: $MODEL_NAME"
+# --- 3. CREATE SECRET (The UI Way: Env Vars) ---
+echo "➤ Creating Secret '$SECRET_NAME'..."
 
-# ---------------------------------------------------------------------------------
-# 1. Configure Data Connection (JSON Format)
-# ---------------------------------------------------------------------------------
-echo "➤ Configuring Data Connection..."
-
-# Create the JSON structure RHOAI expects
-cat <<EOF > /tmp/storage-config.json
-{
-  "type": "s3",
-  "access_key_id": "$ACCESS_KEY",
-  "secret_access_key": "$SECRET_KEY",
-  "endpoint_url": "$MINIO_ENDPOINT",
-  "bucket": "$BUCKET_NAME",
-  "region": "us-east-1"
-}
+# We reproduce the EXACT keys found in your 'decoded secret' logs.
+cat <<EOF | oc apply -n $NAMESPACE -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: $SECRET_NAME
+  labels:
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/managed: "true"
+  annotations:
+    # This annotation is the 'Glue' that lets KServe find the secret for this endpoint
+    serving.kserve.io/s3-endpoint: "$MINIO_HOST:9000"
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: "$ACCESS_KEY"
+  AWS_SECRET_ACCESS_KEY: "$SECRET_KEY"
+  AWS_S3_ENDPOINT: "$MINIO_ENDPOINT"
+  AWS_S3_BUCKET: "$BUCKET_NAME"
+  AWS_DEFAULT_REGION: "us-east-1"
 EOF
 
-# Update the secret
-oc create secret generic "$SECRET_NAME" \
-  -n "$NAMESPACE" \
-  --from-file=models=/tmp/storage-config.json \
-  --dry-run=client -o yaml | oc apply -f -
-
-# Add Dashboard labels
-oc label secret "$SECRET_NAME" -n "$NAMESPACE" \
-  "opendatahub.io/dashboard=true" "opendatahub.io/managed=true" --overwrite > /dev/null
-
-# ---------------------------------------------------------------------------------
-# 2. Configure Service Account
-# ---------------------------------------------------------------------------------
-echo "➤ Configuring Service Account..."
-
-oc create sa "$SERVICE_ACCOUNT" -n "$NAMESPACE" --dry-run=client -o yaml | oc apply -f -
+# --- 4. CONFIGURE SERVICE ACCOUNT ---
+echo "➤ Configuring Service Account '$SERVICE_ACCOUNT'..."
+oc create sa "$SERVICE_ACCOUNT" -n "$NAMESPACE"
 oc secrets link "$SERVICE_ACCOUNT" "$SECRET_NAME" -n "$NAMESPACE" --for=pull,mount
 
-# Force KServe to use this secret (Bypasses URL matching bugs)
-oc annotate sa "$SERVICE_ACCOUNT" -n "$NAMESPACE" \
-  serving.kserve.io/secrets="$SECRET_NAME" --overwrite > /dev/null
+# --- 5. DEFINE RUNTIME (Cached Image) ---
+# Using the Red Hat image you found in the logs to ensure speed.
+VLLM_IMAGE="registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:ad756c01ec99a99cc7d93401c41b8d92ca96fb1ab7c5262919d818f2be4f3768"
 
-# ---------------------------------------------------------------------------------
-# 3. Define Runtime (Cached Image)
-# ---------------------------------------------------------------------------------
-echo "➤ Registering vLLM Runtime..."
-
+echo "➤ Registering Runtime..."
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
@@ -119,10 +108,8 @@ spec:
           nvidia.com/gpu: "1"
 EOF
 
-# ---------------------------------------------------------------------------------
-# 4. Deploy Model
-# ---------------------------------------------------------------------------------
-echo "➤ Deploying InferenceService..."
+# --- 6. DEPLOY INFERENCE SERVICE ---
+echo "➤ Deploying Model (Mirroring UI Config)..."
 
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: serving.kserve.io/v1beta1
@@ -140,7 +127,11 @@ spec:
       modelFormat:
         name: vLLM
       runtime: vllm-runtime
-      storageUri: "s3://models/$MODEL_PATH"
+      
+      # 🛠️ EXACT MATCH TO YOUR UI LOGS 🛠️
+      storage:
+        key: $SECRET_NAME   # "models"
+        path: $MODEL_PATH   # "granite4"
       
       args:
         - "--dtype=float16"
@@ -158,10 +149,8 @@ spec:
           nvidia.com/gpu: "1" 
 EOF
 
-# ---------------------------------------------------------------------------------
-# 5. Wait for Success
-# ---------------------------------------------------------------------------------
-echo "⏳ Waiting for Model to Load..."
+# --- 7. MONITOR ---
+echo "⏳ Waiting for Model..."
 for i in {1..30}; do
   STATUS=$(oc get inferenceservice $MODEL_NAME -n $NAMESPACE -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
   if [ "$STATUS" == "True" ]; then
