@@ -2,10 +2,7 @@
 
 # =================================================================================
 # SCRIPT: deploy-serve.sh
-# DESCRIPTION: Production deployment for Granite-4-Micro on OpenShift AI.
-#              - configures RHOAI-compatible Data Connection (JSON)
-#              - configures dedicated Service Account
-#              - deploys cached Red Hat vLLM Runtime
+# DESCRIPTION: Production Deployment (Auto-Detects Storage & Fixes Permissions)
 # =================================================================================
 
 set -e
@@ -15,74 +12,79 @@ NAMESPACE="model-deploy-lab"
 MODEL_NAME="granite-4-micro"
 SERVICE_ACCOUNT="models-sa"
 SECRET_NAME="storage-config"
+BUCKET_NAME="models"
+MODEL_PATH="granite4" # Folder inside the bucket
 
-# MinIO Connection Details (Matches your Fast-Track Lab)
-MINIO_ENDPOINT="http://minio-service.${NAMESPACE}.svc.cluster.local:9000"
-MINIO_ACCESS="minio"
-MINIO_SECRET="minio123"
-MINIO_BUCKET="models"
-MODEL_PATH="granite4" # Path inside the bucket
+# --- CREDENTIALS (MUST MATCH FAST-TRACK) ---
+ACCESS_KEY="minio"
+SECRET_KEY="minio123"
 
-# RHOAI 2.13+ Optimized vLLM Image (Cached)
+# --- AUTO-DETECT MINIO SERVICE ---
+# We look for a service named 'minio' or 'minio-service' to avoid DNS errors.
+echo "🔍 Detecting MinIO Service..."
+if oc get svc minio -n $NAMESPACE >/dev/null 2>&1; then
+    MINIO_HOST="minio.${NAMESPACE}.svc.cluster.local"
+    echo "   ✔ Found Service: minio"
+elif oc get svc minio-service -n $NAMESPACE >/dev/null 2>&1; then
+    MINIO_HOST="minio-service.${NAMESPACE}.svc.cluster.local"
+    echo "   ✔ Found Service: minio-service"
+else
+    echo "   ⚠️  Could not auto-detect MinIO service. Defaulting to 'minio-service'."
+    MINIO_HOST="minio-service.${NAMESPACE}.svc.cluster.local"
+fi
+
+# Internal URL (HTTP) is faster and safer for pods than the external HTTPS route
+MINIO_ENDPOINT="http://${MINIO_HOST}:9000"
+echo "   ➤ Using Storage Endpoint: $MINIO_ENDPOINT"
+
+# --- RHOAI OPTIMIZED IMAGE ---
 VLLM_IMAGE="registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:ad756c01ec99a99cc7d93401c41b8d92ca96fb1ab7c5262919d818f2be4f3768"
 
-echo "🚀 Starting Production Deployment: $MODEL_NAME"
+echo "🚀 Starting Deployment: $MODEL_NAME"
 
 # ---------------------------------------------------------------------------------
-# 1. Configure Data Connection (The Fix)
+# 1. Configure Data Connection (JSON Format)
 # ---------------------------------------------------------------------------------
-# RHOAI requires the secret to be a JSON object to inject it correctly.
-# We update the existing secret to match this standard.
 echo "➤ Configuring Data Connection..."
 
+# Create the JSON structure RHOAI expects
 cat <<EOF > /tmp/storage-config.json
 {
   "type": "s3",
-  "access_key_id": "$MINIO_ACCESS",
-  "secret_access_key": "$MINIO_SECRET",
+  "access_key_id": "$ACCESS_KEY",
+  "secret_access_key": "$SECRET_KEY",
   "endpoint_url": "$MINIO_ENDPOINT",
-  "bucket": "$MINIO_BUCKET",
+  "bucket": "$BUCKET_NAME",
   "region": "us-east-1"
 }
 EOF
 
-# Update the secret using the JSON file. 
-# We use the key 'models' to match the bucket name, which helps KServe find it.
+# Update the secret
 oc create secret generic "$SECRET_NAME" \
   -n "$NAMESPACE" \
   --from-file=models=/tmp/storage-config.json \
   --dry-run=client -o yaml | oc apply -f -
 
-# Apply Dashboard labels so it appears correctly in the UI
+# Add Dashboard labels
 oc label secret "$SECRET_NAME" -n "$NAMESPACE" \
-  "opendatahub.io/dashboard=true" \
-  "opendatahub.io/managed=true" \
-  --overwrite > /dev/null
-
-echo "   ✔ Data Connection configured (JSON format)."
+  "opendatahub.io/dashboard=true" "opendatahub.io/managed=true" --overwrite > /dev/null
 
 # ---------------------------------------------------------------------------------
 # 2. Configure Service Account
 # ---------------------------------------------------------------------------------
-echo "➤ Configuring Identity (Service Account)..."
+echo "➤ Configuring Service Account..."
 
-# Ensure the Service Account exists
 oc create sa "$SERVICE_ACCOUNT" -n "$NAMESPACE" --dry-run=client -o yaml | oc apply -f -
-
-# Link the secret to the Service Account (Standard Permissions)
 oc secrets link "$SERVICE_ACCOUNT" "$SECRET_NAME" -n "$NAMESPACE" --for=pull,mount
 
-# Annotate the SA to FORCE the secret mount (Bypasses URL matching issues)
+# Force KServe to use this secret (Bypasses URL matching bugs)
 oc annotate sa "$SERVICE_ACCOUNT" -n "$NAMESPACE" \
-  serving.kserve.io/secrets="$SECRET_NAME" \
-  --overwrite > /dev/null
-
-echo "   ✔ Service Account '$SERVICE_ACCOUNT' configured."
+  serving.kserve.io/secrets="$SECRET_NAME" --overwrite > /dev/null
 
 # ---------------------------------------------------------------------------------
-# 3. Define Serving Runtime (Cached Image)
+# 3. Define Runtime (Cached Image)
 # ---------------------------------------------------------------------------------
-echo "➤ registering vLLM Runtime..."
+echo "➤ Registering vLLM Runtime..."
 
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: serving.kserve.io/v1alpha1
@@ -118,7 +120,7 @@ spec:
 EOF
 
 # ---------------------------------------------------------------------------------
-# 4. Deploy Inference Service
+# 4. Deploy Model
 # ---------------------------------------------------------------------------------
 echo "➤ Deploying InferenceService..."
 
@@ -138,16 +140,13 @@ spec:
       modelFormat:
         name: vLLM
       runtime: vllm-runtime
-      # URI points to the 'models' bucket and 'granite4' folder
       storageUri: "s3://models/$MODEL_PATH"
       
-      # 🛠️ ARGUMENTS (Aligned with RHOAI UI defaults) 🛠️
       args:
         - "--dtype=float16"
         - "--max-model-len=8192" 
         - "--gpu-memory-utilization=0.90" 
       
-      # 🛠️ RESOURCES (Aligned with your successful deployment) 🛠️
       resources:
         requests:
           cpu: "2"
@@ -160,14 +159,11 @@ spec:
 EOF
 
 # ---------------------------------------------------------------------------------
-# 5. Wait for Readiness
+# 5. Wait for Success
 # ---------------------------------------------------------------------------------
-echo "⏳ Deployment submitted. Waiting for Model to Load..."
-
-# 5 Minute Timeout Loop
+echo "⏳ Waiting for Model to Load..."
 for i in {1..30}; do
   STATUS=$(oc get inferenceservice $MODEL_NAME -n $NAMESPACE -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
-  
   if [ "$STATUS" == "True" ]; then
     URL=$(oc get inferenceservice $MODEL_NAME -n $NAMESPACE -o jsonpath='{.status.url}')
     echo ""
@@ -175,23 +171,9 @@ for i in {1..30}; do
     echo "🔗 Endpoint: $URL/v1/completions"
     exit 0
   fi
-  
-  # Check for failure states in the conditions
-  FAIL_MSG=$(oc get inferenceservice $MODEL_NAME -n $NAMESPACE -o jsonpath='{.status.conditions[?(@.status=="False")].message}' 2>/dev/null)
-  if [[ ! -z "$FAIL_MSG" && "$FAIL_MSG" != "" ]]; then
-      # Only print if it's not a standard "Initializing" message
-      if [[ "$FAIL_MSG" != *"ContainerCreating"* && "$FAIL_MSG" != *"PodInitializing"* ]]; then
-         echo -n "!"
-      else
-         echo -n "."
-      fi
-  else
-      echo -n "."
-  fi
-
+  echo -n "."
   sleep 10
 done
 
 echo ""
-echo "⚠️  Timeout. Run this command to debug:"
-echo "oc logs -n $NAMESPACE -l serving.kserve.io/inferenceservice=$MODEL_NAME -c storage-initializer"
+echo "⚠️  Timeout. Check logs: oc logs -n $NAMESPACE -l serving.kserve.io/inferenceservice=$MODEL_NAME -c storage-initializer"
