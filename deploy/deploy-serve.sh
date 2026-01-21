@@ -2,10 +2,9 @@
 
 # =================================================================================
 # SCRIPT: deploy-serve.sh
-# DESCRIPTION: Production Deployment for RHOAI Course.
-#              - Defines its own Runtime (Reliability)
-#              - Uses Red Hat Cached Images (Speed)
-#              - Uses Explicit Secret Wiring (Security)
+# DESCRIPTION: Production Deployment based on "gemma-3-12b-it" Helm Chart.
+#              - Uses exact Image & SHM config from working Helm example.
+#              - Adapts storage from OCI to your MinIO S3 bucket.
 # =================================================================================
 
 set -e
@@ -14,7 +13,7 @@ set -e
 NAMESPACE="model-deploy-lab"
 MODEL_NAME="granite-4-micro"
 SERVICE_ACCOUNT="models-sa"
-SECRET_NAME="models"    # Matches UI convention
+SECRET_NAME="models"
 BUCKET_NAME="models"
 MODEL_PATH="granite4" 
 
@@ -22,8 +21,8 @@ MODEL_PATH="granite4"
 ACCESS_KEY="minio"
 SECRET_KEY="minio123"
 
-# --- 1. DETECT MINIO (Internal Service) ---
-# We auto-detect the internal service name to prevent DNS errors.
+# --- 1. DETECT MINIO SERVICE ---
+# Auto-detects internal service name to prevent DNS errors
 if oc get svc minio-service -n $NAMESPACE >/dev/null 2>&1; then
     MINIO_HOST="minio-service.${NAMESPACE}.svc.cluster.local"
 else
@@ -32,16 +31,15 @@ fi
 MINIO_ENDPOINT="http://${MINIO_HOST}:9000"
 echo "🔍 Using Storage Endpoint: $MINIO_ENDPOINT"
 
-# --- 2. CLEANUP (Fresh Start) ---
+# --- 2. CLEANUP ---
 echo "🧹 Cleaning previous deployments..."
 oc delete inferenceservice $MODEL_NAME -n $NAMESPACE --ignore-not-found
-oc delete servingruntime vllm-runtime -n $NAMESPACE --ignore-not-found
+oc delete servingruntime $MODEL_NAME -n $NAMESPACE --ignore-not-found
 oc delete secret $SECRET_NAME -n $NAMESPACE --ignore-not-found
 oc delete sa $SERVICE_ACCOUNT -n $NAMESPACE --ignore-not-found
 
-# --- 3. CREATE SECRET (Env Var Format) ---
+# --- 3. CREATE SECRET (Explicit Env Vars) ---
 echo "➤ Creating Storage Secret..."
-# We use the explicit keys found in the UI logs.
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: v1
 kind: Secret
@@ -66,27 +64,30 @@ echo "➤ Configuring Service Account..."
 oc create sa "$SERVICE_ACCOUNT" -n "$NAMESPACE"
 oc secrets link "$SERVICE_ACCOUNT" "$SECRET_NAME" -n "$NAMESPACE" --for=pull,mount
 
-# --- 5. DEFINE RUNTIME (Local Definition = Guaranteed Start) ---
-# We define the runtime HERE so we don't depend on global templates matching specific names.
-# We use the Red Hat image you successfully pulled earlier.
-echo "➤ Registering Local vLLM Runtime..."
+# --- 5. DEFINE RUNTIME (Cloned from Working Helm Chart) ---
+# We use the EXACT image and volume configuration from your working example.
+echo "➤ Registering Runtime..."
 
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
 metadata:
-  name: vllm-runtime
+  name: $MODEL_NAME
   annotations:
-    openshift.io/display-name: vLLM (NVIDIA GPU)
+    opendatahub.io/apiProtocol: REST
     opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+    opendatahub.io/template-display-name: vLLM NVIDIA GPU ServingRuntime
+  labels:
+    opendatahub.io/dashboard: "true"
 spec:
+  multiModel: false
   supportedModelFormats:
     - name: vLLM
       autoSelect: true
   containers:
     - name: kserve-container
-      # THE GOLDEN IMAGE (Red Hat Cached)
-      image: registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:ad756c01ec99a99cc7d93401c41b8d92ca96fb1ab7c5262919d818f2be4f3768
+      # 🟢 EXACT IMAGE FROM YOUR WORKING YAML
+      image: registry.redhat.io/rhoai/odh-vllm-cuda-rhel9:v2.25.0-1759340926
       command: ["python", "-m", "vllm.entrypoints.openai.api_server"]
       args:
         - "--port=8080"
@@ -98,15 +99,19 @@ spec:
       ports:
         - containerPort: 8080
           protocol: TCP
-      resources:
-        requests:
-          nvidia.com/gpu: "1"
-        limits:
-          nvidia.com/gpu: "1"
+      # 🟢 CRITICAL: Shared Memory Mount (Was missing in previous attempts)
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: shm
+  volumes:
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 2Gi
 EOF
 
 # --- 6. DEPLOY INFERENCE SERVICE ---
-echo "➤ Deploying Model..."
+echo "➤ Deploying InferenceService..."
 
 cat <<EOF | oc apply -n $NAMESPACE -f -
 apiVersion: serving.kserve.io/v1beta1
@@ -115,6 +120,7 @@ metadata:
   name: $MODEL_NAME
   labels:
     opendatahub.io/dashboard: "true"
+    networking.kserve.io/visibility: exposed
   annotations:
     serving.kserve.io/deploymentMode: RawDeployment
 spec:
@@ -124,28 +130,31 @@ spec:
       modelFormat:
         name: vLLM
       
-      # Points to the LOCAL runtime we just defined above (Guaranteed to exist)
-      runtime: vllm-runtime
+      # Points to the local runtime we defined above (Same name as model)
+      runtime: $MODEL_NAME
       
-      # EXPLICIT WIRING (Matches UI logs)
+      # 🛠️ STORAGE: We swap OCI:// for your MinIO Secret 🛠️
       storage:
         key: $SECRET_NAME
         path: $MODEL_PATH
       
       args:
         - "--dtype=float16"
-        - "--max-model-len=8192" 
-        - "--gpu-memory-utilization=0.90" 
+        - "--max-model-len=2000" 
       
       resources:
         requests:
           cpu: "2"
-          memory: "6Gi"
+          memory: "2Gi"
           nvidia.com/gpu: "1"
         limits:
           cpu: "4"
-          memory: "14Gi"
-          nvidia.com/gpu: "1" 
+          memory: "8Gi"
+          nvidia.com/gpu: "1"
+    tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
 EOF
 
 # --- 7. MONITOR ---
