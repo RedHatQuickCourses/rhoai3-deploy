@@ -69,20 +69,6 @@ CONTEXT_LIMIT="8192"  # Tuned for Micro footprint
 
 == Step 4: Execute the Deployment
 
-Create a service account to access the storage. 
-[source,bash]
-----
-# 1. Create a dedicated Service Account for the model
-oc create sa granite-sa -n model-deploy-lab
-
-# 2. Grant the Service Account access to the secret (Pull & Mount)
-oc secrets link granite-sa storage-config -n model-deploy-lab --for=pull,mount
-
-# 3. (Optional) If you use the internal registry, link the builder secret too
-oc secrets link granite-sa builder-dockercfg-$(oc get sa builder -n model-deploy-lab -o jsonpath='{.secrets[0].name}' | sed 's/builder-dockercfg-//') -n model-deploy-lab
-
-----
-
 . **Run the deployment script:**
 +
 [source,bash]
