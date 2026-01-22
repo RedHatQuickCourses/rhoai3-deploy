@@ -44,13 +44,15 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 ====
 
 ---
-
+[IMPORTANT]
+.Are you catching up?
+====
 Run this "One-Liner" instead
 Run this command once. It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace."
 
 Bash
 oc process vllm-cuda-runtime-template -n redhat-ods-applications | oc apply -f - -n model-deploy-lab
-
+====
 
 1. Get the Inference URL
 Run this to grab the route directly from the KServe status:

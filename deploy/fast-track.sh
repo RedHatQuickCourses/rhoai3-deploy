@@ -13,9 +13,9 @@ set -e
 
 # --- CONFIGURATION ---
 NAMESPACE="model-deploy-lab"
-MODEL_ID="ibm-granite/granite-4.0-micro" # Using 2B for speed, change to 8b if needed
+MODEL_ID="ibm-granite/granite-3.3-8b-instruct " # Using 2B for speed, change to 8b if needed
 S3_BUCKET="models"
-S3_FOLDER="granite4"
+S3_FOLDER="granite338b"
 MINIO_ACCESS_KEY="minio"
 MINIO_SECRET_KEY="minio123"
 SERVICE_ACCOUNT="fast-track-sa"
