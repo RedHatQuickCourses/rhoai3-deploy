@@ -1,7 +1,7 @@
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: granite-33-8b
+  name: granite3b
   namespace: model-deploy-lab
   annotations:
     openshift.io/display-name: "Granite 3.3 8B Instruct"
@@ -34,7 +34,7 @@ spec:
       # Looks up the secret 'minio-data-connection' and appends the path
       storage:
         key: minio-data-connection
-        path: granite338b
+        path: granite3b
       
       # 8B Model Requirements
       resources:
