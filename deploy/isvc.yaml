@@ -1,0 +1,44 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite-4-micro
+  namespace: model-deploy-lab
+  annotations:
+    openshift.io/display-name: "Granite 4.0 Micro"
+    serving.kserve.io/deploymentMode: RawDeployment
+    serving.kserve.io/runtime: vllm-runtime
+spec:
+  predictor:
+    serviceAccountName: granite-sa  # <--- MUST MATCH THE SA CREATED ABOVE
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-runtime
+      
+      # Syntax: s3://<bucket>/<path>
+      # Your bucket is "models", directory is "granite4"
+      storageUri: s3://models/granite4
+
+      resources:
+        requests:
+          cpu: "4"
+          memory: "12Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "4"
+          memory: "12Gi"
+          nvidia.com/gpu: "1"
+
+      args:
+        - "--model"
+        - "/mnt/models" 
+        - "--port"
+        - "8080"
+        - "--max-model-len"
+        - "16000"
+        # Since this is a small 6GB model, limiting gpu-utilization 
+        # leaves room for other overhead without OOMing.
+        - "--gpu-memory-utilization"
+        - "0.6"
+        - "--distributed-executor-backend"
+        - "mp"
