@@ -6,17 +6,14 @@ metadata:
   annotations:
     openshift.io/display-name: "Granite 4.0 Micro"
     serving.kserve.io/deploymentMode: RawDeployment
-    serving.kserve.io/runtime: vllm-runtime
+    serving.kserve.io/runtime: vllm-cuda-runtime
 spec:
   predictor:
-    serviceAccountName: granite-sa  # <--- MUST MATCH THE SA CREATED ABOVE
+    serviceAccountName: granite-sa
     model:
       modelFormat:
         name: vLLM
-      runtime: vllm-runtime
-      
-      # Syntax: s3://<bucket>/<path>
-      # Your bucket is "models", directory is "granite4"
+      runtime: vllm-cuda-runtime
       storageUri: s3://models/granite4
 
       resources:
@@ -29,6 +26,12 @@ spec:
           memory: "12Gi"
           nvidia.com/gpu: "1"
 
+      # --- CHANGE 1: MOUNT THE VOLUME ---
+      volumeMounts:
+        - name: template-volume
+          mountPath: /mnt/template
+          readOnly: true
+
       args:
         - "--model"
         - "/mnt/models" 
@@ -36,9 +39,16 @@ spec:
         - "8080"
         - "--max-model-len"
         - "16000"
-        # Since this is a small 6GB model, limiting gpu-utilization 
-        # leaves room for other overhead without OOMing.
         - "--gpu-memory-utilization"
         - "0.6"
         - "--distributed-executor-backend"
         - "mp"
+        # --- CHANGE 2: ARGUMENT TO USE TEMPLATE ---
+        - "--chat-template"
+        - "/mnt/template/granite.jinja"
+
+    # --- CHANGE 3: DEFINE THE VOLUME ---
+    volumes:
+      - name: template-volume
+        configMap:
+          name: granite-chat-template

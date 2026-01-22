@@ -43,6 +43,58 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 **xref:fast-track.adoc[Click here to run the Fast Track Setup Script]** to get your environment ready in 2 minutes.
 ====
 
+---
+
+Run this "One-Liner" instead
+Run this command once. It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace."
+
+Bash
+oc process vllm-cuda-runtime-template -n redhat-ods-applications | oc apply -f - -n model-deploy-lab
+
+
+1. Get the Inference URL
+Run this to grab the route directly from the KServe status:
+
+Bash
+export MODEL_URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
+echo "Targeting: $MODEL_URL"
+
+
+2. Send the Request
+Since vLLM provides an OpenAI-compatible API, we hit the /v1/chat/completions endpoint.
+
+Bash
+curl -k -X POST "$MODEL_URL/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "granite-4-micro",
+    "messages": [
+      {
+        "role": "user", 
+        "content": "Write a haiku about open source software."
+      }
+    ],
+    "temperature": 0.7,
+    "max_tokens": 100
+  }'
+
+  curl -k -X POST "$MODEL_URL/v1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "granite-4-micro",
+    "messages": [
+      {
+        "role": "user", 
+        "content": "Write a haiku about open source software."
+      }
+    ],
+    "temperature": 0.7,
+    "max_tokens": 100
+  }'
+
+
+
+
 == Step 2: The Architecture
 
 Our script (`deploy/deploy-serve.sh`) automates the creation of two critical Kubernetes Custom Resources (CRs) in the `model-deploy-lab` namespace:
