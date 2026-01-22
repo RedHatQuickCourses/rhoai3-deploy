@@ -29,7 +29,7 @@ spec:
         name: vLLM
       runtime: vllm-cuda-runtime
       
-      storageUri: s3://models/granite3b
+      storageUri: s3://models/granite3
       
       # Even with a profile, we usually keep these limits as the "Request" 
       # matching the profile's definition.
