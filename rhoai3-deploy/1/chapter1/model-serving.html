@@ -165,6 +165,69 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 </tr>
 </table>
 </div>
+<hr>
+<div class="paragraph">
+<p>Run this "One-Liner" instead
+Run this command once. It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace."</p>
+</div>
+<div class="paragraph">
+<p>Bash
+oc process vllm-cuda-runtime-template -n redhat-ods-applications | oc apply -f - -n model-deploy-lab</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Get the Inference URL
+Run this to grab the route directly from the KServe status:</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Bash
+export MODEL_URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
+echo "Targeting: $MODEL_URL"</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Send the Request
+Since vLLM provides an OpenAI-compatible API, we hit the /v1/chat/completions endpoint.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Bash
+curl -k -X POST "$MODEL_URL/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "granite-4-micro",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Write a haiku about open source software."
+      }
+    ],
+    "temperature": 0.7,
+    "max_tokens": 100
+  }'</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>curl -k -X POST "$MODEL_URL/v1" \
+-H "Content-Type: application/json" \
+-d '{
+  "model": "granite-4-micro",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Write a haiku about open source software."
+    }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 100
+}'</pre>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
