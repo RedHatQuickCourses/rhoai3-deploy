@@ -166,6 +166,14 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 </table>
 </div>
 <hr>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="title">Are you catching up?</div>
 <div class="paragraph">
 <p>Run this "One-Liner" instead
 Run this command once. It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace."</p>
@@ -173,6 +181,10 @@ Run this command once. It asks the cluster: "Hey, give me the official vLLM NVID
 <div class="paragraph">
 <p>Bash
 oc process vllm-cuda-runtime-template -n redhat-ods-applications | oc apply -f - -n model-deploy-lab</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
