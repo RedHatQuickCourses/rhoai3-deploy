@@ -1,20 +1,21 @@
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: granite3b
+  name: granite-3b
   namespace: model-deploy-lab
   annotations:
-    openshift.io/display-name: "Granite 3.3 8B Instruct"
+    openshift.io/display-name: "Granite 3.3 2B Instruct"
     
-    # --- UI-STYLE: SECURITY ENABLED ---
+    # --- SECURITY ---
     security.opendatahub.io/enable-auth: "true"
     
-    # --- UI-STYLE: HARDWARE PROFILE ---
-    # This tells the UI which "T-Shirt Size" is selected
+    # --- HARDWARE PROFILE FIX ---
+    # 1. The name of the profile (e.g., NVIDIA A100, Small GPU, etc.)
     opendatahub.io/hardware-profile-name: gpu-profile
+    # 2. THE MISSING LINK: Tells RHOAI this profile lives in the global system namespace
+    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
     
     serving.kserve.io/deploymentMode: RawDeployment
-    # Refers to the template we extracted via CLI
     serving.kserve.io/runtime: vllm-cuda-runtime
     
   labels:
@@ -26,17 +27,14 @@ spec:
     model:
       modelFormat:
         name: vLLM
-      
-      # Refers to the template we extracted via CLI
       runtime: vllm-cuda-runtime
       
-      # --- UI-STYLE: STORAGE KEY ---
-      # Looks up the secret 'minio-data-connection' and appends the path
       storage:
         key: minio-data-connection
         path: granite3b
       
-      # 8B Model Requirements
+      # Even with a profile, we usually keep these limits as the "Request" 
+      # matching the profile's definition.
       resources:
         requests:
           cpu: "4"
@@ -52,7 +50,6 @@ spec:
         - "/mnt/models" 
         - "--port"
         - "8080"
-        # 8B is larger; we reduce context to 4k or 8k to fit on standard GPUs
         - "--max-model-len"
         - "8192"
         - "--gpu-memory-utilization"
