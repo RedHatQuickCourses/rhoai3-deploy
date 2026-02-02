@@ -1,5 +1,6 @@
 * xref:index.adoc[Introduction & Value]
 * xref:chapter1:gpu-arch.adoc[GPU Architecture]
+* xref:chapter1:kserve.adoc[Kserve Architecture]
 * xref:chapter1:vram-calc.adoc[The Sizing Guide]
 * xref:chapter1:vllm-engine.adoc[vLLM]
 * xref:chapter1:tuning-vllm.adoc[vLLM Tuning]
