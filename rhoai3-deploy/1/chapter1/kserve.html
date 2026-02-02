@@ -134,10 +134,10 @@
 <h2 id="_1_the_core_problem_the_last_mile_of_ml"><a class="anchor" href="#_1_the_core_problem_the_last_mile_of_ml"></a>1. The Core Problem: The "Last Mile" of ML</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>[cite_start]KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production[cite: 1].</p>
+<p>KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production.</p>
 </div>
 <div class="paragraph">
-<p>[cite_start]Think of KServe as a "universal adapter" for your models[cite: 2]. [cite_start]Instead of writing custom web servers (like Flask or FastAPI) for every different framework you use, KServe provides a standardized Custom Resource Definition (CRD) called the <code>InferenceService</code>[cite: 3].</p>
+<p>Think of KServe as a "universal adapter" for your models. Instead of writing custom web servers (like Flask or FastAPI) for every different framework you use, KServe provides a standardized Custom Resource Definition (CRD) called the <code>InferenceService</code>.</p>
 </div>
 <div class="paragraph">
 <p>Its core value proposition handles the infrastructure heavy lifting so engineers can focus on the model:</p>
@@ -145,13 +145,13 @@
 <div class="ulist">
 <ul>
 <li>
-<p><strong class="cite_start">Abstracted Runtimes:</strong> You provide a model URI (e.g., S3), and KServe automatically spins up the correct container (Triton, TorchServe, vLLM)[cite: 7].</p>
+<p><strong>Abstracted Runtimes:</strong> You provide a model URI (e.g., S3), and KServe automatically spins up the correct container (Triton, TorchServe, vLLM).</p>
 </li>
 <li>
-<p><strong class="cite_start">Standardized Protocol:</strong> It uses the V2 Inference Protocol, meaning client code remains consistent even if the backend framework changes[cite: 6].</p>
+<p><strong>Standardized Protocol:</strong> It uses the V2 Inference Protocol, meaning client code remains consistent even if the backend framework changes.</p>
 </li>
 <li>
-<p><strong class="cite_start">Serverless Capabilities:</strong> Historically, KServe is known for scaling replicas based on traffic, including "scaling to zero" to save costs[cite: 5].</p>
+<p><strong>Serverless Capabilities:</strong> Historically, KServe is known for scaling replicas based on traffic, including "scaling to zero" to save costs.</p>
 </li>
 </ul>
 </div>
@@ -161,15 +161,15 @@
 <h2 id="_2_the_engine_kserve_vllm"><a class="anchor" href="#_2_the_engine_kserve_vllm"></a>2. The Engine: KServe + vLLM</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>[cite_start]For serving LLMs on Kubernetes, pairing <strong>KServe</strong> with <strong>vLLM</strong> is currently the industry standard[cite: 16].</p>
+<p>For serving LLMs on Kubernetes, pairing <strong>KServe</strong> with <strong>vLLM</strong> is currently the industry standard.</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong class="cite_start">KServe (The Manager):</strong> Handles networking, DNS, and autoscaling[cite: 18].</p>
+<p><strong>KServe (The Manager):</strong> Handles networking, DNS, and autoscaling.</p>
 </li>
 <li>
-<p><strong>vLLM (The Engine):</strong> Handles the math and memory management. [cite_start]It is famous for <em>PagedAttention</em>, an algorithm that manages GPU memory efficiently to allow large request batches[cite: 19, 20].</p>
+<p><strong>vLLM (The Engine):</strong> Handles the actual math and memory management. It is famous for <em>PagedAttention</em>, an algorithm that manages GPU memory much more efficiently than standard PyTorch, allowing for larger request batches.</p>
 </li>
 </ul>
 </div>
@@ -179,12 +179,12 @@
 <h2 id="_3_configuration_the_template_and_the_instance"><a class="anchor" href="#_3_configuration_the_template_and_the_instance"></a>3. Configuration: The Template and The Instance</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>[cite_start]To configure this setup, we must decouple the "how" from the "what" using two specific Kubernetes resources[cite: 22].</p>
+<p>To configure this setup, we must decouple the "how" from the "what" using two specific Kubernetes resources.</p>
 </div>
 <div class="sect2">
 <h3 id="_the_servingruntime_the_template"><a class="anchor" href="#_the_servingruntime_the_template"></a>The ServingRuntime (The Template)</h3>
 <div class="paragraph">
-<p>The <code>ServingRuntime</code> tells KServe <strong>how</strong> to run the container. [cite_start]It defines the Docker image and the startup command[cite: 23].</p>
+<p>The <code>ServingRuntime</code> tells KServe <strong>how</strong> to run the container. It defines the Docker image and the startup command.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -196,39 +196,23 @@ spec:
   containers:
   - name: kserve-container
     image: vllm/vllm-openai:latest
+    # The command explicitly starts the Python interpreter to run the OpenAI-compatible server module
     command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
     args:
       - "--model"
-      - "/mnt/models"  <i class="conum" data-value="1"></i><b>(1)</b>
+      - "/mnt/models"
       - "--port"
       - "8080"</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>[cite_start]&lt;1&gt; <strong>Crucial Detail:</strong> We point the model path to <code>/mnt/models</code> because KServe automatically mounts downloaded model files here[cite: 41, 54].</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="title">Sidebar: The Role of the Python Interpreter</div>
-<div class="paragraph">
-<p>You might notice the command <code>python3 -m vllm&#8230;&#8203;</code>.
-The CPU/GPU speaks binary (Machine Code), not Python. [cite_start]The Python interpreter acts as the translator[cite: 190, 191].
-[cite_start]While the heavy math runs on pre-compiled C++/CUDA binaries, the Python layer handles the control logic (web requests and queue management)[cite: 194, 196].</p>
-</div>
-</td>
-</tr>
-</table>
+<p>A critical detail in the configuration above is the model path: <code>/mnt/models</code>. We point the model path here because KServe automatically mounts downloaded model files to this location.</p>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_the_inferenceservice_the_instance"><a class="anchor" href="#_the_inferenceservice_the_instance"></a>The InferenceService (The Instance)</h3>
 <div class="paragraph">
-<p>[cite_start]The <code>InferenceService</code> tells KServe <strong>which</strong> specific model to deploy using the template above[cite: 24].</p>
+<p>The <code>InferenceService</code> tells KServe <strong>which</strong> specific model to deploy using the template above.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -241,18 +225,18 @@ spec:
     model:
       modelFormat:
         name: pytorch
-      storageUri: "s3://my-bucket/llama2/v1.0" <i class="conum" data-value="1"></i><b>(1)</b>
+      # Point to the specific version folder (e.g., /v1.0) so the Storage Initializer
+      # doesn't download unnecessary files from the parent bucket.
+      storageUri: "s3://my-bucket/llama2/v1.0"
       runtime: vllm-runtime
+      # We must explicitly request GPUs. Setting limit and request to "1"
+      # tells Kubernetes to find a node with exactly one available GPU.
       resources:
         limits:
-          nvidia.com/gpu: "1" <i class="conum" data-value="2"></i><b>(2)</b>
+          nvidia.com/gpu: "1"
         requests:
           nvidia.com/gpu: "1"</code></pre>
 </div>
-</div>
-<div class="paragraph">
-<p>[cite_start]&lt;1&gt; <strong>Efficiency:</strong> Point <code>storageUri</code> to the specific version folder (e.g., <code>/v1.0</code>) so the "Prep Chef" (Storage Initializer) doesn&#8217;t download unnecessary files from the parent bucket[cite: 50, 69, 130].
-&lt;2&gt; <strong>Hardware:</strong> We must explicitly request GPUs. [cite_start]Setting limit and request to "1" tells Kubernetes to find a node with exactly one available GPU[cite: 124, 125].</p>
 </div>
 </div>
 </div>
@@ -261,7 +245,7 @@ spec:
 <h2 id="_4_deployment_modes_serverless_vs_rawdeployment"><a class="anchor" href="#_4_deployment_modes_serverless_vs_rawdeployment"></a>4. Deployment Modes: Serverless vs. RawDeployment</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>KServe offers two primary deployment modes. [cite_start]While Serverless is the default, <strong>RawDeployment</strong> is often preferred for enterprise LLM workloads (like OpenShift AI)[cite: 151].</p>
+<p>KServe offers two primary deployment modes. While Serverless is the default, <strong>RawDeployment</strong> is often preferred for enterprise LLM workloads (like OpenShift AI).</p>
 </div>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
@@ -278,32 +262,24 @@ spec:
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Architecture</strong>
-[cite_start]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Request &#8594; Activator &#8594; Queue &#8594; Container [cite: 158]
-[cite_start]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Request &#8594; Service &#8594; Container [cite: 167]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Architecture</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Request &#8594; Activator &#8594; Queue &#8594; Container</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Request &#8594; Service &#8594; Container</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Scaling</strong>
-[cite_start]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Can scale to 0. Scales on "requests per second"[cite: 175].
-[cite_start]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum 1. Scales on CPU/RAM metrics (HPA)[cite: 175].</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Scaling</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Can scale to 0. Scales on "requests per second".</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum 1. Scales on CPU/RAM metrics (HPA).</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Latency</strong>
-[cite_start]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">High "Cold Start" (10-30s)[cite: 163].
-[cite_start]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Consistent low latency (Always on)[cite: 175].</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Latency</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">High "Cold Start" (10-30s).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Consistent low latency (Always on).</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Best For</strong>
-[cite_start]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Dev/Test, cost savings[cite: 175].
-[cite_start]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Production LLMs</strong>, strict SLAs[cite: 175].</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Best For</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Dev/Test, cost savings.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Production LLMs</strong>, strict SLAs.</p></td>
 </tr>
 </tbody>
 </table>
@@ -315,13 +291,13 @@ spec:
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p><strong>Avoid Cold Starts:</strong> Booting a large model takes 30-60 seconds. [cite_start]In a chat app, waiting this long is unacceptable[cite: 178, 179].</p>
+<p><strong>Avoid Cold Starts:</strong> Booting a large model takes 30-60 seconds. In a chat app, waiting this long is unacceptable.</p>
 </li>
 <li>
-<p><strong>GPU Scarcity:</strong> If you scale to zero, you release your GPU. [cite_start]In a busy cluster, another team might grab it before you scale back up[cite: 181, 182].</p>
+<p><strong>GPU Scarcity:</strong> If you scale to zero, you release your GPU. In a busy cluster, another team might grab it before you scale back up.</p>
 </li>
 <li>
-<p><strong class="cite_start">Protocol Stability:</strong> Removing the complex Knative proxies improves the stability of long-running streaming responses (token-by-token generation)[cite: 184, 186].</p>
+<p><strong>Protocol Stability:</strong> Removing the complex Knative proxies improves the stability of long-running streaming responses (token-by-token generation).</p>
 </li>
 </ol>
 </div>
@@ -332,12 +308,12 @@ spec:
 <h2 id="_5_day_2_operations_metrics_observability"><a class="anchor" href="#_5_day_2_operations_metrics_observability"></a>5. Day 2 Operations: Metrics &amp; Observability</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Running an LLM without metrics is dangerous. [cite_start]For vLLM, metrics are critical for monitoring <strong>GPU Memory Management</strong>[cite: 200, 201].</p>
+<p>Running an LLM without metrics is dangerous. For vLLM, metrics are critical for monitoring <strong>GPU Memory Management</strong>.</p>
 </div>
 <div class="sect2">
 <h3 id="_enabling_metrics"><a class="anchor" href="#_enabling_metrics"></a>Enabling Metrics</h3>
 <div class="paragraph">
-<p>[cite_start]In <code>RawDeployment</code>, we add annotations to the <code>InferenceService</code> to tell Prometheus where to scrape data[cite: 210, 211].</p>
+<p>In <code>RawDeployment</code>, we add annotations to the <code>InferenceService</code> to tell Prometheus where to scrape data.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -348,19 +324,10 @@ metadata:
 spec:
   predictor:
     annotations:
-      prometheus.io/scrape: 'true'   <i class="conum" data-value="1"></i><b>(1)</b>
-      prometheus.io/port: '8080'     <i class="conum" data-value="2"></i><b>(2)</b>
+      prometheus.io/scrape: 'true'
+      prometheus.io/port: '8080'
       prometheus.io/path: '/metrics'</code></pre>
 </div>
-</div>
-<div class="colist arabic">
-<table>
-<tr>
-<td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>Enables the scraper.
-[cite_start]&lt;2&gt; Must match the port vLLM is listening on[cite: 237].</td>
-</tr>
-</table>
 </div>
 </div>
 <div class="sect2">
@@ -371,13 +338,13 @@ spec:
 <div class="ulist">
 <ul>
 <li>
-<p><strong>The Fuel Gauge (<code>vllm:gpu_cache_usage_perc</code>):</strong> Measures KV Cache fullness. [cite_start]If this hits &gt;95%, vLLM will pause requests to swap memory[cite: 241, 244].</p>
+<p><strong>The Fuel Gauge (<code>vllm:gpu_cache_usage_perc</code>)</strong>: Measures KV Cache fullness. If this hits &gt;95%, vLLM will pause requests to swap memory.</p>
 </li>
 <li>
-<p><strong>The Speedometer (<code>vllm:time_per_output_token_seconds</code>):</strong> Measures user-perceived latency. [cite_start]Target &lt;50ms per token for an "instant" feel[cite: 247, 249].</p>
+<p><strong>The Speedometer (<code>vllm:time_per_output_token_seconds</code>)</strong>: Measures user-perceived latency. Target &lt;50ms per token for an "instant" feel.</p>
 </li>
 <li>
-<p><strong class="cite_start">The Traffic (<code>vllm:num_requests_waiting</code>):</strong> If this is &gt;0, users are stuck in the queue, and your Autoscaler should have already kicked in[cite: 252, 256].</p>
+<p><strong>The Traffic (<code>vllm:num_requests_waiting</code>)</strong>: If this is &gt;0, users are stuck in the queue, and your Autoscaler should have already kicked in.</p>
 </li>
 </ul>
 </div>
