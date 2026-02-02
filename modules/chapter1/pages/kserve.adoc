@@ -8,29 +8,30 @@ toc::[]
 
 == 1. The Core Problem: The "Last Mile" of ML
 
-[cite_start]KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production[cite: 1].
+KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production.
 
-[cite_start]Think of KServe as a "universal adapter" for your models[cite: 2]. [cite_start]Instead of writing custom web servers (like Flask or FastAPI) for every different framework you use, KServe provides a standardized Custom Resource Definition (CRD) called the `InferenceService`[cite: 3].
+Think of KServe as a "universal adapter" for your models. Instead of writing custom web servers (like Flask or FastAPI) for every different framework you use, KServe provides a standardized Custom Resource Definition (CRD) called the `InferenceService`.
 
 Its core value proposition handles the infrastructure heavy lifting so engineers can focus on the model:
 
-* [cite_start]**Abstracted Runtimes:** You provide a model URI (e.g., S3), and KServe automatically spins up the correct container (Triton, TorchServe, vLLM)[cite: 7].
-* [cite_start]**Standardized Protocol:** It uses the V2 Inference Protocol, meaning client code remains consistent even if the backend framework changes[cite: 6].
-* [cite_start]**Serverless Capabilities:** Historically, KServe is known for scaling replicas based on traffic, including "scaling to zero" to save costs[cite: 5].
+* **Abstracted Runtimes:** You provide a model URI (e.g., S3), and KServe automatically spins up the correct container (Triton, TorchServe, vLLM).
+* **Standardized Protocol:** It uses the V2 Inference Protocol, meaning client code remains consistent even if the backend framework changes.
+* **Serverless Capabilities:** Historically, KServe is known for scaling replicas based on traffic, including "scaling to zero" to save costs.
 
 == 2. The Engine: KServe + vLLM
 
-[cite_start]For serving LLMs on Kubernetes, pairing **KServe** with **vLLM** is currently the industry standard[cite: 16].
+For serving LLMs on Kubernetes, pairing **KServe** with **vLLM** is currently the industry standard.
 
-* [cite_start]**KServe (The Manager):** Handles networking, DNS, and autoscaling[cite: 18].
-* **vLLM (The Engine):** Handles the math and memory management. [cite_start]It is famous for _PagedAttention_, an algorithm that manages GPU memory efficiently to allow large request batches[cite: 19, 20].
+* **KServe (The Manager):** Handles networking, DNS, and autoscaling.
+* **vLLM (The Engine):** Handles the actual math and memory management. It is famous for _PagedAttention_, an algorithm that manages GPU memory much more efficiently than standard PyTorch, allowing for larger request batches.
 
 == 3. Configuration: The Template and The Instance
 
-[cite_start]To configure this setup, we must decouple the "how" from the "what" using two specific Kubernetes resources[cite: 22].
+To configure this setup, we must decouple the "how" from the "what" using two specific Kubernetes resources.
 
 === The ServingRuntime (The Template)
-The `ServingRuntime` tells KServe *how* to run the container. [cite_start]It defines the Docker image and the startup command[cite: 23].
+
+The `ServingRuntime` tells KServe *how* to run the container. It defines the Docker image and the startup command.
 
 [source,yaml]
 ----
@@ -42,25 +43,20 @@ spec:
   containers:
   - name: kserve-container
     image: vllm/vllm-openai:latest
+    # The command explicitly starts the Python interpreter to run the OpenAI-compatible server module
     command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
     args:
       - "--model"
-      - "/mnt/models"  # <1>
+      - "/mnt/models"
       - "--port"
       - "8080"
 ----
-[cite_start]<1> **Crucial Detail:** We point the model path to `/mnt/models` because KServe automatically mounts downloaded model files here[cite: 41, 54].
 
-.Sidebar: The Role of the Python Interpreter
-[NOTE]
-====
-You might notice the command `python3 -m vllm...`.
-The CPU/GPU speaks binary (Machine Code), not Python. [cite_start]The Python interpreter acts as the translator[cite: 190, 191].
-[cite_start]While the heavy math runs on pre-compiled C++/CUDA binaries, the Python layer handles the control logic (web requests and queue management)[cite: 194, 196].
-====
+A critical detail in the configuration above is the model path: `/mnt/models`. We point the model path here because KServe automatically mounts downloaded model files to this location.
 
 === The InferenceService (The Instance)
-[cite_start]The `InferenceService` tells KServe *which* specific model to deploy using the template above[cite: 24].
+
+The `InferenceService` tells KServe *which* specific model to deploy using the template above.
 
 [source,yaml]
 ----
@@ -73,55 +69,59 @@ spec:
     model:
       modelFormat:
         name: pytorch
-      storageUri: "s3://my-bucket/llama2/v1.0" # <1>
+      # Point to the specific version folder (e.g., /v1.0) so the Storage Initializer
+      # doesn't download unnecessary files from the parent bucket.
+      storageUri: "s3://my-bucket/llama2/v1.0"
       runtime: vllm-runtime
+      # We must explicitly request GPUs. Setting limit and request to "1"
+      # tells Kubernetes to find a node with exactly one available GPU.
       resources:
         limits:
-          nvidia.com/gpu: "1" # <2>
+          nvidia.com/gpu: "1"
         requests:
           nvidia.com/gpu: "1"
 ----
-[cite_start]<1> **Efficiency:** Point `storageUri` to the specific version folder (e.g., `/v1.0`) so the "Prep Chef" (Storage Initializer) doesn't download unnecessary files from the parent bucket[cite: 50, 69, 130].
-<2> **Hardware:** We must explicitly request GPUs. [cite_start]Setting limit and request to "1" tells Kubernetes to find a node with exactly one available GPU[cite: 124, 125].
 
 == 4. Deployment Modes: Serverless vs. RawDeployment
 
-KServe offers two primary deployment modes. [cite_start]While Serverless is the default, **RawDeployment** is often preferred for enterprise LLM workloads (like OpenShift AI)[cite: 151].
+KServe offers two primary deployment modes. While Serverless is the default, **RawDeployment** is often preferred for enterprise LLM workloads (like OpenShift AI).
 
 [cols="1,1,1"]
 |===
 |Feature |Serverless (Knative) |RawDeployment
 
 |**Architecture**
-[cite_start]|Request -> Activator -> Queue -> Container [cite: 158]
-[cite_start]|Request -> Service -> Container [cite: 167]
+|Request -> Activator -> Queue -> Container
+|Request -> Service -> Container
 
 |**Scaling**
-[cite_start]|Can scale to 0. Scales on "requests per second"[cite: 175].
-[cite_start]|Minimum 1. Scales on CPU/RAM metrics (HPA)[cite: 175].
+|Can scale to 0. Scales on "requests per second".
+|Minimum 1. Scales on CPU/RAM metrics (HPA).
 
 |**Latency**
-[cite_start]|High "Cold Start" (10-30s)[cite: 163].
-[cite_start]|Consistent low latency (Always on)[cite: 175].
+|High "Cold Start" (10-30s).
+|Consistent low latency (Always on).
 
 |**Best For**
-[cite_start]|Dev/Test, cost savings[cite: 175].
-[cite_start]|**Production LLMs**, strict SLAs[cite: 175].
+|Dev/Test, cost savings.
+|**Production LLMs**, strict SLAs.
 |===
 
 === Why OpenShift AI uses RawDeployment
+
 In production scenarios, `RawDeployment` is the workhorse for three reasons:
 
-1.  **Avoid Cold Starts:** Booting a large model takes 30-60 seconds. [cite_start]In a chat app, waiting this long is unacceptable[cite: 178, 179].
-2.  **GPU Scarcity:** If you scale to zero, you release your GPU. [cite_start]In a busy cluster, another team might grab it before you scale back up[cite: 181, 182].
-3.  [cite_start]**Protocol Stability:** Removing the complex Knative proxies improves the stability of long-running streaming responses (token-by-token generation)[cite: 184, 186].
+1.  **Avoid Cold Starts:** Booting a large model takes 30-60 seconds. In a chat app, waiting this long is unacceptable.
+2.  **GPU Scarcity:** If you scale to zero, you release your GPU. In a busy cluster, another team might grab it before you scale back up.
+3.  **Protocol Stability:** Removing the complex Knative proxies improves the stability of long-running streaming responses (token-by-token generation).
 
 == 5. Day 2 Operations: Metrics & Observability
 
-Running an LLM without metrics is dangerous. [cite_start]For vLLM, metrics are critical for monitoring **GPU Memory Management**[cite: 200, 201].
+Running an LLM without metrics is dangerous. For vLLM, metrics are critical for monitoring **GPU Memory Management**.
 
 === Enabling Metrics
-[cite_start]In `RawDeployment`, we add annotations to the `InferenceService` to tell Prometheus where to scrape data[cite: 210, 211].
+
+In `RawDeployment`, we add annotations to the `InferenceService` to tell Prometheus where to scrape data.
 
 [source,yaml]
 ----
@@ -132,16 +132,15 @@ metadata:
 spec:
   predictor:
     annotations:
-      prometheus.io/scrape: 'true'   # <1>
-      prometheus.io/port: '8080'     # <2>
+      prometheus.io/scrape: 'true'
+      prometheus.io/port: '8080'
       prometheus.io/path: '/metrics'
 ----
-<1> Enables the scraper.
-[cite_start]<2> Must match the port vLLM is listening on[cite: 237].
 
 === The "Big Three" Metrics
+
 Focus your dashboards on these three critical signals:
 
-* **The Fuel Gauge (`vllm:gpu_cache_usage_perc`):** Measures KV Cache fullness. [cite_start]If this hits >95%, vLLM will pause requests to swap memory[cite: 241, 244].
-* **The Speedometer (`vllm:time_per_output_token_seconds`):** Measures user-perceived latency. [cite_start]Target <50ms per token for an "instant" feel[cite: 247, 249].
-* [cite_start]**The Traffic (`vllm:num_requests_waiting`):** If this is >0, users are stuck in the queue, and your Autoscaler should have already kicked in[cite: 252, 256].
+* **The Fuel Gauge (`vllm:gpu_cache_usage_perc`)**: Measures KV Cache fullness. If this hits >95%, vLLM will pause requests to swap memory.
+* **The Speedometer (`vllm:time_per_output_token_seconds`)**: Measures user-perceived latency. Target <50ms per token for an "instant" feel.
+* **The Traffic (`vllm:num_requests_waiting`)**: If this is >0, users are stuck in the queue, and your Autoscaler should have already kicked in.
