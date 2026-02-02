@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>KServe for Production LLMs: From Concept to Raw Deployment :: Red Hat OpenShift AI (RHOAI) Enterprise Model Serving</title>
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../../_/css/site.css">
+    <script>var uiRootPath = '../../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://www.redhat.com" target="_blank"><img src="../../../_/img/redhat-logo.png" height="40px" alt="Red Hat"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="../../..">Red Hat OpenShift AI (RHOAI) Enterprise Model Serving</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://github.com/RedHatQuickCourses/REPLACEREPONAME/issues" target="_blank">Report Issues</a>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="rhoai3-deploy" data-version="1">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Red Hat OpenShift AI (RHOAI) Enterprise Model Serving</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../index.html">Introduction &amp; Value</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="gpu-arch.html">GPU Architecture</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="vram-calc.html">The Sizing Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="vllm-engine.html">vLLM</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="tuning-vllm.html">vLLM Tuning</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="model-serving.html">Deploy a Model</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="summary.html">Summary</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Red Hat OpenShift AI (RHOAI) Enterprise Model Serving</span>
+    <span class="version">1</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="../index.html">Red Hat OpenShift AI (RHOAI) Enterprise Model Serving</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="../index.html">1</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Red Hat OpenShift AI (RHOAI) Enterprise Model Serving</a></li>
+    <li><a href="kserve.html">KServe for Production LLMs: From Concept to Raw Deployment</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">KServe for Production LLMs: From Concept to Raw Deployment</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This guide documents the architectural progression of serving Large Language Models (LLMs) using KServe. It covers the transition from basic serverless concepts to the "RawDeployment" patterns preferred by OpenShift AI (RHOAI) for production workloads.</p>
+</div>
+<div id="toc" class="toc">
+<div id="toctitle" class="title">On this page</div>
+<ul class="sectlevel1">
+<li><a href="#_1_the_core_problem_the_last_mile_of_ml">1. The Core Problem: The "Last Mile" of ML</a></li>
+<li><a href="#_2_the_engine_kserve_vllm">2. The Engine: KServe + vLLM</a></li>
+<li><a href="#_3_configuration_the_template_and_the_instance">3. Configuration: The Template and The Instance</a>
+<ul class="sectlevel2">
+<li><a href="#_the_servingruntime_the_template">The ServingRuntime (The Template)</a></li>
+<li><a href="#_the_inferenceservice_the_instance">The InferenceService (The Instance)</a></li>
+</ul>
+</li>
+<li><a href="#_4_deployment_modes_serverless_vs_rawdeployment">4. Deployment Modes: Serverless vs. RawDeployment</a>
+<ul class="sectlevel2">
+<li><a href="#_why_openshift_ai_uses_rawdeployment">Why OpenShift AI uses RawDeployment</a></li>
+</ul>
+</li>
+<li><a href="#_5_day_2_operations_metrics_observability">5. Day 2 Operations: Metrics &amp; Observability</a>
+<ul class="sectlevel2">
+<li><a href="#_enabling_metrics">Enabling Metrics</a></li>
+<li><a href="#_the_big_three_metrics">The "Big Three" Metrics</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_1_the_core_problem_the_last_mile_of_ml"><a class="anchor" href="#_1_the_core_problem_the_last_mile_of_ml"></a>1. The Core Problem: The "Last Mile" of ML</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>[cite_start]KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production[cite: 1].</p>
+</div>
+<div class="paragraph">
+<p>[cite_start]Think of KServe as a "universal adapter" for your models[cite: 2]. [cite_start]Instead of writing custom web servers (like Flask or FastAPI) for every different framework you use, KServe provides a standardized Custom Resource Definition (CRD) called the <code>InferenceService</code>[cite: 3].</p>
+</div>
+<div class="paragraph">
+<p>Its core value proposition handles the infrastructure heavy lifting so engineers can focus on the model:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong class="cite_start">Abstracted Runtimes:</strong> You provide a model URI (e.g., S3), and KServe automatically spins up the correct container (Triton, TorchServe, vLLM)[cite: 7].</p>
+</li>
+<li>
+<p><strong class="cite_start">Standardized Protocol:</strong> It uses the V2 Inference Protocol, meaning client code remains consistent even if the backend framework changes[cite: 6].</p>
+</li>
+<li>
+<p><strong class="cite_start">Serverless Capabilities:</strong> Historically, KServe is known for scaling replicas based on traffic, including "scaling to zero" to save costs[cite: 5].</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_2_the_engine_kserve_vllm"><a class="anchor" href="#_2_the_engine_kserve_vllm"></a>2. The Engine: KServe + vLLM</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>[cite_start]For serving LLMs on Kubernetes, pairing <strong>KServe</strong> with <strong>vLLM</strong> is currently the industry standard[cite: 16].</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong class="cite_start">KServe (The Manager):</strong> Handles networking, DNS, and autoscaling[cite: 18].</p>
+</li>
+<li>
+<p><strong>vLLM (The Engine):</strong> Handles the math and memory management. [cite_start]It is famous for <em>PagedAttention</em>, an algorithm that manages GPU memory efficiently to allow large request batches[cite: 19, 20].</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_3_configuration_the_template_and_the_instance"><a class="anchor" href="#_3_configuration_the_template_and_the_instance"></a>3. Configuration: The Template and The Instance</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>[cite_start]To configure this setup, we must decouple the "how" from the "what" using two specific Kubernetes resources[cite: 22].</p>
+</div>
+<div class="sect2">
+<h3 id="_the_servingruntime_the_template"><a class="anchor" href="#_the_servingruntime_the_template"></a>The ServingRuntime (The Template)</h3>
+<div class="paragraph">
+<p>The <code>ServingRuntime</code> tells KServe <strong>how</strong> to run the container. [cite_start]It defines the Docker image and the startup command[cite: 23].</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-runtime
+spec:
+  containers:
+  - name: kserve-container
+    image: vllm/vllm-openai:latest
+    command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
+    args:
+      - "--model"
+      - "/mnt/models"  <i class="conum" data-value="1"></i><b>(1)</b>
+      - "--port"
+      - "8080"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>[cite_start]&lt;1&gt; <strong>Crucial Detail:</strong> We point the model path to <code>/mnt/models</code> because KServe automatically mounts downloaded model files here[cite: 41, 54].</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="title">Sidebar: The Role of the Python Interpreter</div>
+<div class="paragraph">
+<p>You might notice the command <code>python3 -m vllm&#8230;&#8203;</code>.
+The CPU/GPU speaks binary (Machine Code), not Python. [cite_start]The Python interpreter acts as the translator[cite: 190, 191].
+[cite_start]While the heavy math runs on pre-compiled C++/CUDA binaries, the Python layer handles the control logic (web requests and queue management)[cite: 194, 196].</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_the_inferenceservice_the_instance"><a class="anchor" href="#_the_inferenceservice_the_instance"></a>The InferenceService (The Instance)</h3>
+<div class="paragraph">
+<p>[cite_start]The <code>InferenceService</code> tells KServe <strong>which</strong> specific model to deploy using the template above[cite: 24].</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: llama-32-prod
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: pytorch
+      storageUri: "s3://my-bucket/llama2/v1.0" <i class="conum" data-value="1"></i><b>(1)</b>
+      runtime: vllm-runtime
+      resources:
+        limits:
+          nvidia.com/gpu: "1" <i class="conum" data-value="2"></i><b>(2)</b>
+        requests:
+          nvidia.com/gpu: "1"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>[cite_start]&lt;1&gt; <strong>Efficiency:</strong> Point <code>storageUri</code> to the specific version folder (e.g., <code>/v1.0</code>) so the "Prep Chef" (Storage Initializer) doesn&#8217;t download unnecessary files from the parent bucket[cite: 50, 69, 130].
+&lt;2&gt; <strong>Hardware:</strong> We must explicitly request GPUs. [cite_start]Setting limit and request to "1" tells Kubernetes to find a node with exactly one available GPU[cite: 124, 125].</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_4_deployment_modes_serverless_vs_rawdeployment"><a class="anchor" href="#_4_deployment_modes_serverless_vs_rawdeployment"></a>4. Deployment Modes: Serverless vs. RawDeployment</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>KServe offers two primary deployment modes. [cite_start]While Serverless is the default, <strong>RawDeployment</strong> is often preferred for enterprise LLM workloads (like OpenShift AI)[cite: 151].</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Feature</th>
+<th class="tableblock halign-left valign-top">Serverless (Knative)</th>
+<th class="tableblock halign-left valign-top">RawDeployment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Architecture</strong>
+[cite_start]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Request &#8594; Activator &#8594; Queue &#8594; Container [cite: 158]
+[cite_start]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Request &#8594; Service &#8594; Container [cite: 167]</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Scaling</strong>
+[cite_start]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Can scale to 0. Scales on "requests per second"[cite: 175].
+[cite_start]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum 1. Scales on CPU/RAM metrics (HPA)[cite: 175].</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Latency</strong>
+[cite_start]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">High "Cold Start" (10-30s)[cite: 163].
+[cite_start]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Consistent low latency (Always on)[cite: 175].</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Best For</strong>
+[cite_start]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Dev/Test, cost savings[cite: 175].
+[cite_start]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Production LLMs</strong>, strict SLAs[cite: 175].</p></td>
+</tr>
+</tbody>
+</table>
+<div class="sect2">
+<h3 id="_why_openshift_ai_uses_rawdeployment"><a class="anchor" href="#_why_openshift_ai_uses_rawdeployment"></a>Why OpenShift AI uses RawDeployment</h3>
+<div class="paragraph">
+<p>In production scenarios, <code>RawDeployment</code> is the workhorse for three reasons:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Avoid Cold Starts:</strong> Booting a large model takes 30-60 seconds. [cite_start]In a chat app, waiting this long is unacceptable[cite: 178, 179].</p>
+</li>
+<li>
+<p><strong>GPU Scarcity:</strong> If you scale to zero, you release your GPU. [cite_start]In a busy cluster, another team might grab it before you scale back up[cite: 181, 182].</p>
+</li>
+<li>
+<p><strong class="cite_start">Protocol Stability:</strong> Removing the complex Knative proxies improves the stability of long-running streaming responses (token-by-token generation)[cite: 184, 186].</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_5_day_2_operations_metrics_observability"><a class="anchor" href="#_5_day_2_operations_metrics_observability"></a>5. Day 2 Operations: Metrics &amp; Observability</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Running an LLM without metrics is dangerous. [cite_start]For vLLM, metrics are critical for monitoring <strong>GPU Memory Management</strong>[cite: 200, 201].</p>
+</div>
+<div class="sect2">
+<h3 id="_enabling_metrics"><a class="anchor" href="#_enabling_metrics"></a>Enabling Metrics</h3>
+<div class="paragraph">
+<p>[cite_start]In <code>RawDeployment</code>, we add annotations to the <code>InferenceService</code> to tell Prometheus where to scrape data[cite: 210, 211].</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: llama-32-prod
+spec:
+  predictor:
+    annotations:
+      prometheus.io/scrape: 'true'   <i class="conum" data-value="1"></i><b>(1)</b>
+      prometheus.io/port: '8080'     <i class="conum" data-value="2"></i><b>(2)</b>
+      prometheus.io/path: '/metrics'</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Enables the scraper.
+[cite_start]&lt;2&gt; Must match the port vLLM is listening on[cite: 237].</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_the_big_three_metrics"><a class="anchor" href="#_the_big_three_metrics"></a>The "Big Three" Metrics</h3>
+<div class="paragraph">
+<p>Focus your dashboards on these three critical signals:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>The Fuel Gauge (<code>vllm:gpu_cache_usage_perc</code>):</strong> Measures KV Cache fullness. [cite_start]If this hits &gt;95%, vLLM will pause requests to swap memory[cite: 241, 244].</p>
+</li>
+<li>
+<p><strong>The Speedometer (<code>vllm:time_per_output_token_seconds</code>):</strong> Measures user-perceived latency. [cite_start]Target &lt;50ms per token for an "instant" feel[cite: 247, 249].</p>
+</li>
+<li>
+<p><strong class="cite_start">The Traffic (<code>vllm:num_requests_waiting</code>):</strong> If this is &gt;0, users are stuck in the queue, and your Autoscaler should have already kicked in[cite: 252, 256].</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <img src="../../../_/img/rhl-logo-red.png" height="40px" alt="Red Hat"  href="https://redhat.com" >
+</footer><script id="site-script" src="../../../_/js/site.js" data-ui-root-path="../../../_"></script>
+<script async src="../../../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
