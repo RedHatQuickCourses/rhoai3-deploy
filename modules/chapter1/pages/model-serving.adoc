@@ -66,10 +66,10 @@ echo "Targeting: $MODEL_URL"
 Since vLLM provides an OpenAI-compatible API, we hit the /v1/chat/completions endpoint.
 
 Bash
-curl -k -X POST "$MODEL_URL/v1/chat/completions" \
+curl -k -X POST "https://granite-3b-predictor.model-deploy-lab.svc.cluster.local:8443/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "granite-4-micro",
+    "model": "granite-3b",
     "messages": [
       {
         "role": "user", 
