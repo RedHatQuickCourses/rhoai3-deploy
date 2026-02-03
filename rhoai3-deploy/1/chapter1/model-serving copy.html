@@ -301,7 +301,7 @@ export URL=$(oc get inferenceservice granite-4-micro -n rhoai-model-vllm-lab -o 
 curl -k $URL/v1/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "granite-4-micro",
+    "model": "granite3",
     "prompt": "Define 'GitOps' in one sentence.",
     "max_tokens": 60
   }'</code></pre>
