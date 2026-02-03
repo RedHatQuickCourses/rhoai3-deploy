@@ -41,7 +41,7 @@ Once the script completes (look for `✅ SUCCESS`), verify the environment is re
 +
 [source,bash]
 ----
-oc rsh -n model-deploy-lab deployment/minio ls -l /data/models/granite4 
+oc rsh -n model-deploy-lab deployment/minio ls -l /data/models/granite3 
 ----
 
 xref:model-serving.adoc[Return to the Serving Lab]

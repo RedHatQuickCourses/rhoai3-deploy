@@ -158,16 +158,28 @@ The script outputs a `curl` command. Run it to confirm the model is reasoning.
 [source,bash]
 ----
 # Get the URL dynamically
-export URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
+export URL=$(oc get inferenceservice granite3 -n my-first-model -o jsonpath='{.status.url}')
 
 # Send a prompt
 curl -k $URL/v1/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "granite-4-micro",
+    "model": "granite3",
     "prompt": "Write a haiku about GitOps.",
     "max_tokens": 60
   }'
 ----
 
 xref:course-summary.adoc[Next: Course Summary]
+
+
+curl -k -X POST "https://$MODEL_URL/v1" \
+     -H "Authorization: Bearer $MODEL_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "model": "granite3",
+       "messages": [
+         {"role": "user", "content": "Write a hello world python function."}
+       ],
+       "max_tokens": 50
+     }'

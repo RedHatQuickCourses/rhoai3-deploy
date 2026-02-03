@@ -1,4 +1,4 @@
-= Enterprise Model Serving: The Engineering Reality
+= Enterprise Model Serving at Scale
 :navtitle: Strategy & Selection
 :toc: macro
 
@@ -15,7 +15,6 @@ But in the production phase, the metrics change. Suddenly, you are judged on **L
 A developer might download a 70-billion parameter model to a laptop and be impressed by its reasoning.
 A Platform Engineer looks at that same model and sees a massive infrastructure bill, potential `OutofMemory` errors, and a latency bottleneck that could kill the user experience.
 
-This course is your guide to the **Engineering Reality** of AI.
 We are moving beyond "Shadow AI"—where users blindly deploy heavy models—to a governed "AI Factory" where inference is fast, efficient, and cost-effective by design.
 
 == The Core Challenge: "Will It Fit?"
@@ -24,14 +23,12 @@ Deploying an LLM is not like deploying a microservice. You cannot just throw it 
 You must answer three critical questions before you ever run a `kubectl apply`:
 
  1.  **The Selection:** Is this model the right size for the task, or are we burning GPU cycles on overkill?
-  2.  **The Hardware:** Do we have enough Video RAM (VRAM) to handle the model weights *plus* the concurrent user traffic (KV Cache)?
+ 2.  **The Hardware:** Do we have enough Video RAM (VRAM) to handle the model weights *plus* the concurrent user traffic (KV Cache)?
  3.  **The Engine:** Is our runtime (vLLM) tuned to maximize throughput, or are we leaving performance on the table?
 
 == The Serving Workflow
 
 In this course, we will break down the black box of model serving into a repeatable engineering process.
-
-
 
 === 1. Smart Model Selection
 You don't have to benchmark 900,000 models from scratch.
@@ -54,9 +51,9 @@ You will learn to tune critical parameters like:
 Finally, we will abandon the "Click-Ops" dashboard.
 You will deploy a production-ready **InferenceService** using a parameterized script. This moves your infrastructure from "manual configuration" to "code," enabling reproducible and scalable deployments.
 
-== Our Laboratory Model: granite-4-micro
+== Our Laboratory Model: granite-3.3b-instruct
 
-To practice these concepts without requiring a massive GPU cluster, we will standardize on the **IBM granite-4-micro** model.
+To practice these concepts without requiring a massive GPU cluster, we will standardize on the **IBM granite-3.3b-instruct** model.
 
 * **Why this model?**
 
@@ -76,3 +73,18 @@ To successfully complete the hands-on sections of this course, you need:
 
 ---
 *The goal is efficient inference. Let's start by calculating the cost.*
+
+
+oc get pod -l serving.kserve.io/inferenceservice=granite3 \
+  -n model-deploy-lab \
+  -o jsonpath='{.items[0].spec.containers[0].args}'
+
+  export URL=$(oc get inferenceservice granite3 -n model-deploy-lab -o jsonpath='{.status.url}')
+
+curl -k $URL/v1 \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "granite3",
+    "prompt": "Write a haiku about GitOps.",
+    "max_tokens": 60
+  }'

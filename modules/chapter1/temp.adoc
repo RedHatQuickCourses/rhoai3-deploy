@@ -1,0 +1,304 @@
+= Deploying Granite 3 with KServe on OpenShift AI
+:toc: macro
+:toc-title: On this page
+:source-highlighter: highlight.js
+
+This guide documents the production deployment of the Granite 3 LLM using KServe in "RawDeployment" mode. It utilizes the standard OpenShift AI runtimes (`vllm-cuda-runtime`) but bypasses the UI abstraction layers for maximum GitOps reproducibility.
+
+toc::[]
+
+== 1. Prerequisites
+
+Ensure the standard vLLM runtime is available on your cluster.
+Run the following to verify:
+
+[source,bash]
+----
+oc get servingruntime vllm-cuda-runtime -n my-first-model
+----
+
+* **Note:** This runtime requires the `modelFormat` to be set to `vLLM` (case-sensitive).
+
+== 2. The Deployment (InferenceService)
+
+We use a declarative `InferenceService` configured for **RawDeployment** mode. This bypasses Knative serverless scaling (avoiding cold starts) and directly manages Kubernetes Pods.
+
+**Key Configurations:**
+* **Deployment Mode:** `RawDeployment` for "always-on" stability.
+* **Auth:** `enable-auth: 'true'` injects the OAuth sidecar.
+* **Hardware:** We explicitly request `nvidia.com/gpu: 1`, bypassing Hardware Profiles.
+* **Format:** We request `name: vLLM` to match the default runtime's capabilities.
+
+.inferenceservice-secure.yaml
+[source,yaml]
+----
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite3
+  namespace: my-first-model
+  annotations:
+    # 1. Operational Mode
+    serving.kserve.io/deploymentMode: RawDeployment
+    
+    # 2. Security (OAuth Sidecar)
+    security.opendatahub.io/enable-auth: 'true'
+    
+    # 3. Observability (Metrics)
+    prometheus.io/scrape: 'true'
+    prometheus.io/path: '/metrics'
+    prometheus.io/port: '8080'
+spec:
+  predictor:
+    serviceAccountName: models-sa
+    model:
+      # 4. The Binding (Must match 'vllm-cuda-runtime' support)
+      modelFormat:
+        name: vLLM
+      runtime: vllm-cuda-runtime
+      storageUri: s3://models/granite3
+      
+      # 5. Hardware Resources (The Engine)
+      resources:
+        limits:
+          cpu: '4'
+          memory: 16Gi
+          nvidia.com/gpu: '1' # Explicit GPU request
+        requests:
+          cpu: '2'
+          memory: 12Gi
+          nvidia.com/gpu: '1'
+----
+
+== 3. External Access (The Route)
+
+In `RawDeployment` mode, KServe creates an internal Service but not an external Route. We must manually expose the API.
+
+.route.yaml
+[source,yaml]
+----
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: granite3-api
+  namespace: my-first-model
+spec:
+  to:
+    kind: Service
+    name: granite3-predictor  # Targets the KServe Service
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+----
+
+== 4. Validation
+
+Apply the manifests and wait for the Pod to report `Running`.
+
+[source,bash]
+----
+oc apply -f inferenceservice-secure.yaml
+oc apply -f route.yaml
+oc get pods -w
+----
+
+=== Testing with Authentication
+Since `enable-auth` is active, you must provide a valid OpenShift Service Account token.
+
+[source,bash]
+----
+# 1. Get the Route URL
+export MODEL_URL=$(oc get route granite3-api -o jsonpath='{.spec.host}')
+
+# 2. Generate a Token
+export MODEL_TOKEN=$(oc create token default)
+
+# 3. Call the API
+curl -k -X POST "https://$MODEL_URL/v1/chat/completions" \
+     -H "Authorization: Bearer $MODEL_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "model": "granite3",
+       "messages": [
+         {"role": "user", "content": "Explain Kubernetes in one sentence."}
+       ],
+       "max_tokens": 100
+     }'
+----
+
+
+
+
+
+
+== Lab: Deploying Your First Production LLM on OpenShift AI
+:toc: macro
+:toc-title: Lab Steps
+:source-highlighter: highlight.js
+
+This lab walks you through deploying the **Granite 3** Large Language Model (LLM) using KServe's **RawDeployment** mode.
+
+By the end of this lesson, you will have:
+1.  **Storage:** Configured secure access to your S3 Model bucket.
+2.  **Runtime:** Verified the high-performance vLLM engine.
+3.  **Deployment:** Deployed the model with GPU acceleration and Authentication enabled.
+4.  **Access:** Exposed the model to the public internet and generated a secure access token.
+
+toc::[]
+
+== 1. Project Setup (The Foundation)
+
+First, we create a dedicated project and a Service Account to manage the model's access to storage.
+
+[source,bash]
+----
+# 1. Create a new project (Namespace)
+oc new-project my-first-model --display-name="Production LLM Lab"
+
+# 2. Create a Service Account for the Model
+# This identity allows the model to "log in" to S3 to download weights.
+oc create sa models-sa -n my-first-model
+
+# 3. Create the S3 Secret (Replace values with your actual S3 credentials)
+oc create secret generic storage-config \
+  --from-literal=awsAccessKeyID=YOUR_ACCESS_KEY \
+  --from-literal=awsSecretAccessKey=YOUR_SECRET_KEY \
+  --from-literal=awsRegion=us-east-1 \
+  -n my-first-model
+
+# 4. Link the Secret to the Service Account
+# This grants the 'models-sa' permission to read the 'storage-config'.
+oc secret link models-sa storage-config
+----
+
+== 2. The Deployment (The Engine)
+
+We use a declarative `InferenceService` to define *what* we want to run.
+
+**Key Concepts:**
+* **RawDeployment:** We bypass Serverless to ensure the model is "always on" (no cold starts).
+* **vLLM:** We use the specific `vllm-cuda-runtime` available on the cluster.
+* **Security:** We flip the `enable-auth` switch to `true` to inject an OAuth proxy.
+
+.file: inferenceservice.yaml
+[source,yaml]
+----
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite3
+  namespace: my-first-model
+  annotations:
+    # CRITICAL: Use Raw mode for production stability
+    serving.kserve.io/deploymentMode: RawDeployment
+    # CRITICAL: Enable the security sidecar
+    security.opendatahub.io/enable-auth: 'true'
+spec:
+  predictor:
+    serviceAccountName: models-sa
+    model:
+      # Must match the Runtime's supported format (Case Sensitive!)
+      modelFormat:
+        name: vLLM
+      # Point this to your specific bucket path
+      storageUri: s3://models/granite3
+      runtime: vllm-cuda-runtime
+      resources:
+        limits:
+          nvidia.com/gpu: '1'
+          memory: 16Gi
+          cpu: '4'
+        requests:
+          nvidia.com/gpu: '1'
+          memory: 12Gi
+          cpu: '2'
+----
+
+Apply the deployment:
+[source,bash]
+----
+oc apply -f inferenceservice.yaml
+----
+
+== 3. The Network (The Road)
+
+In `RawDeployment` mode, KServe creates the internal plumbing (Service) but not the external door (Route). We must create it manually.
+
+.file: route.yaml
+[source,yaml]
+----
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: granite3-api
+  namespace: my-first-model
+spec:
+  to:
+    kind: Service
+    name: granite3-predictor  # This name is auto-generated by KServe
+  port:
+    targetPort: 8080          # The vLLM container port
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+----
+
+Apply the route:
+[source,bash]
+----
+oc apply -f route.yaml
+----
+
+== 4. The Client (The Keys)
+
+Since we enabled authentication, we need a valid token to talk to the model. In modern Kubernetes, tokens are generated on-demand, not stored in secrets.
+
+[source,bash]
+----
+# 1. Create a "Client" identity (Best Practice: Don't use default)
+oc create sa client-app -n my-first-model
+
+# 2. Generate a Long-Lived Token (e.g., valid for 1 year)
+export MODEL_TOKEN=$(oc create token client-app --duration=8760h)
+
+# 3. Get the Public URL
+export MODEL_URL=$(oc get route granite3-api -o jsonpath='{.spec.host}')
+
+echo "---------------------------------------------------"
+echo "Model Endpoint: https://$MODEL_URL"
+echo "Access Token:   $MODEL_TOKEN"
+echo "---------------------------------------------------"
+----
+
+== 5. Verification (The Test)
+
+Use `curl` to send a chat completion request. This verifies:
+1.  **Network:** The Route is forwarding traffic.
+2.  **Security:** The Sidecar accepts your Token.
+3.  **Application:** vLLM is loaded and processing logic.
+
+[source,bash]
+----
+curl -k -X POST "https://$MODEL_URL/v1/chat/completions" \
+     -H "Authorization: Bearer $MODEL_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "model": "granite3",
+       "messages": [
+         {"role": "user", "content": "Write a hello world python function."}
+       ],
+       "max_tokens": 50
+     }'
+----
+
+== Troubleshooting
+
+* **Status: Pending?**
+    Run `oc get events` to see if your cluster is out of GPUs or if the Image Pull failed.
+* **Connection Refused?**
+    Wait 2 minutes. vLLM takes time to load the model into GPU memory. Check progress with:
+    `oc logs -l serving.kserve.io/inferenceservice=granite3 -c kserve-container`
+* **403 Forbidden?**
+    Ensure you ran the `oc create token` command inside the `my-first-model` namespace. Tokens are namespaced!
