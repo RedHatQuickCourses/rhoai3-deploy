@@ -176,14 +176,18 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
-<div class="title">Are you catching up?</div>
+<div class="title">Extracting the official nvidia vLLM serving runtime?</div>
 <div class="paragraph">
-<p>Run this "One-Liner" instead
-Run this command once. It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace."</p>
+<p>Run this "One-Liner"
+It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace." where model-deploy-ab is the namespace.</p>
 </div>
 <div class="paragraph">
-<p>Bash
-oc process vllm-cuda-runtime-template -n redhat-ods-applications | oc apply -f - -n model-deploy-lab</p>
+<p>+</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc process vllm-cuda-runtime-template -n redhat-ods-applications | oc apply -f - -n model-deploy-lab</code></pre>
+</div>
 </div>
 </td>
 </tr>
@@ -198,9 +202,13 @@ Run this to grab the route directly from the KServe status:</p>
 </ol>
 </div>
 <div class="paragraph">
-<p>Bash
-export MODEL_URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
-echo "Targeting: $MODEL_URL"</p>
+<p>B[source,bash]</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>export MODEL_URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
+echo "Targeting: $MODEL_URL"</pre>
+</div>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
@@ -210,9 +218,9 @@ Since vLLM provides an OpenAI-compatible API, we hit the /v1/chat/completions en
 </li>
 </ol>
 </div>
-<div class="paragraph">
-<p>Bash
-curl -k -X POST "https://granite-3b-predictor.model-deploy-lab.svc.cluster.local:8443/v1/chat/completions" \
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -k -X POST "https://granite-3b-predictor.model-deploy-lab.svc.cluster.local:8443/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "granite-3b",
@@ -224,23 +232,7 @@ curl -k -X POST "https://granite-3b-predictor.model-deploy-lab.svc.cluster.local
     ],
     "temperature": 0.7,
     "max_tokens": 100
-  }'</p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>curl -k -X POST "$MODEL_URL/v1" \
--H "Content-Type: application/json" \
--d '{
-  "model": "granite-4-micro",
-  "messages": [
-    {
-      "role": "user",
-      "content": "Write a haiku about open source software."
-    }
-  ],
-  "temperature": 0.7,
-  "max_tokens": 100
-}'</pre>
+  }'</code></pre>
 </div>
 </div>
 </div>
@@ -293,9 +285,9 @@ curl -k -X POST "https://granite-3b-predictor.model-deploy-lab.svc.cluster.local
 <div class="title">Key Configuration Block (deploy/deploy-serve.sh)</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAMESPACE="model-deploy-lab"
-MODEL_NAME="granite-4-micro"
-MODEL_PATH="granite4"
-CONTEXT_LIMIT="8192"  # Tuned for Micro footprint</code></pre>
+MODEL_NAME="granite-3b"
+MODEL_PATH="granite3/"
+CONTEXT_LIMIT="16000"  # Tuned for Micro footprint</code></pre>
 </div>
 </div>
 </div>

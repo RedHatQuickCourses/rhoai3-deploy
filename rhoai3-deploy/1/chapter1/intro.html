@@ -125,7 +125,7 @@ A Platform Engineer looks at that same model and sees a massive infrastructure b
 <div class="sectionbody">
 <div class="paragraph">
 <p>Deploying an LLM is not like deploying a microservice. You cannot just throw it into a container and hope for the best.
-You must answer three critical questions before you ever run a <code>kubectl apply</code>:</p>
+You must answer three critical questions before you ever run a <code>oc apply</code>:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
@@ -152,7 +152,7 @@ You must answer three critical questions before you ever run a <code>kubectl app
 <h3 id="_1_smart_model_selection"><a class="anchor" href="#_1_smart_model_selection"></a>1. Smart Model Selection</h3>
 <div class="paragraph">
 <p>You don&#8217;t have to benchmark 900,000 models from scratch.
-We will explore tools like the <strong>Red Hat AI Validated Model Repository</strong>, which acts as a shortcut. It provides pre-vetted models with known performance profiles, allowing you to skip the "guesswork" phase and select models that are guaranteed to work on your hardware.</p>
+We will explore tools like the <strong>Red Hat AI Validated Model Catalog</strong>, which acts as a shortcut. It provides pre-vetted models with known performance profiles, allowing you to skip the "guesswork" phase and select models that are guaranteed to work on your hardware.</p>
 </div>
 </div>
 <div class="sect2">
@@ -250,25 +250,6 @@ You will deploy a production-ready <strong>InferenceService</strong> using a par
 <hr>
 <div class="paragraph">
 <p><strong>The goal is efficient inference. Let&#8217;s start by calculating the cost.</strong></p>
-</div>
-<div class="paragraph">
-<p>oc get pod -l serving.kserve.io/inferenceservice=granite3 \
-  -n model-deploy-lab \
-  -o jsonpath='{.items[0].spec.containers[0].args}'</p>
-</div>
-<div class="literalblock">
-<div class="content">
-<pre>export URL=$(oc get inferenceservice granite3 -n model-deploy-lab -o jsonpath='{.status.url}')</pre>
-</div>
-</div>
-<div class="paragraph">
-<p>curl -k $URL/v1 \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model": "granite3",
-    "prompt": "Write a haiku about GitOps.",
-    "max_tokens": 60
-  }'</p>
 </div>
 </div>
 </div>

@@ -109,34 +109,10 @@
 <div class="paragraph">
 <p>This guide documents the architectural progression of serving Large Language Models (LLMs) using KServe. It covers the transition from basic serverless concepts to the "RawDeployment" patterns preferred by OpenShift AI (RHOAI) for production workloads.</p>
 </div>
-<div id="toc" class="toc">
-<div id="toctitle" class="title">On this page</div>
-<ul class="sectlevel1">
-<li><a href="#_1_the_core_problem_the_last_mile_of_ml">1. The Core Problem: The "Last Mile" of ML</a></li>
-<li><a href="#_2_the_engine_kserve_vllm">2. The Engine: KServe + vLLM</a></li>
-<li><a href="#_3_configuration_the_template_and_the_instance">3. Configuration: The Template and The Instance</a>
-<ul class="sectlevel2">
-<li><a href="#_the_servingruntime_the_template">The ServingRuntime (The Template)</a></li>
-<li><a href="#_the_inferenceservice_the_instance">The InferenceService (The Instance)</a></li>
-</ul>
-</li>
-<li><a href="#_4_deployment_modes_serverless_vs_rawdeployment">4. Deployment Modes: Serverless vs. RawDeployment</a>
-<ul class="sectlevel2">
-<li><a href="#_why_openshift_ai_uses_rawdeployment">Why OpenShift AI uses RawDeployment</a></li>
-</ul>
-</li>
-<li><a href="#_5_day_2_operations_metrics_observability">5. Day 2 Operations: Metrics &amp; Observability</a>
-<ul class="sectlevel2">
-<li><a href="#_enabling_metrics">Enabling Metrics</a></li>
-<li><a href="#_the_big_three_metrics">The "Big Three" Metrics</a></li>
-</ul>
-</li>
-</ul>
-</div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_1_the_core_problem_the_last_mile_of_ml"><a class="anchor" href="#_1_the_core_problem_the_last_mile_of_ml"></a>1. The Core Problem: The "Last Mile" of ML</h2>
+<h2 id="_1_kserve"><a class="anchor" href="#_1_kserve"></a>1. KServe</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production.</p>
@@ -229,7 +205,7 @@ spec:
   predictor:
     model:
       modelFormat:
-        name: pytorch
+        name: vLLM
       # Point to the specific version folder (e.g., /v1.0) so the Storage Initializer
       # doesn't download unnecessary files from the parent bucket.
       storageUri: "s3://my-bucket/llama2/v1.0"
