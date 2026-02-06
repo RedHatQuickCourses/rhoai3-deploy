@@ -4,9 +4,8 @@
 
 This guide documents the architectural progression of serving Large Language Models (LLMs) using KServe. It covers the transition from basic serverless concepts to the "RawDeployment" patterns preferred by OpenShift AI (RHOAI) for production workloads.
 
-toc::[]
 
-== 1. The Core Problem: The "Last Mile" of ML
+== 1. KServe
 
 KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production.
 
@@ -68,7 +67,7 @@ spec:
   predictor:
     model:
       modelFormat:
-        name: pytorch
+        name: vLLM
       # Point to the specific version folder (e.g., /v1.0) so the Storage Initializer
       # doesn't download unnecessary files from the parent bucket.
       storageUri: "s3://my-bucket/llama2/v1.0"

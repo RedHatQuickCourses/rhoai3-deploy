@@ -20,7 +20,7 @@ We are moving beyond "Shadow AI"—where users blindly deploy heavy models—to 
 == The Core Challenge: "Will It Fit?"
 
 Deploying an LLM is not like deploying a microservice. You cannot just throw it into a container and hope for the best.
-You must answer three critical questions before you ever run a `kubectl apply`:
+You must answer three critical questions before you ever run a `oc apply`:
 
  1.  **The Selection:** Is this model the right size for the task, or are we burning GPU cycles on overkill?
  2.  **The Hardware:** Do we have enough Video RAM (VRAM) to handle the model weights *plus* the concurrent user traffic (KV Cache)?
@@ -32,7 +32,7 @@ In this course, we will break down the black box of model serving into a repeata
 
 === 1. Smart Model Selection
 You don't have to benchmark 900,000 models from scratch.
-We will explore tools like the **Red Hat AI Validated Model Repository**, which acts as a shortcut. It provides pre-vetted models with known performance profiles, allowing you to skip the "guesswork" phase and select models that are guaranteed to work on your hardware.
+We will explore tools like the **Red Hat AI Validated Model Catalog**, which acts as a shortcut. It provides pre-vetted models with known performance profiles, allowing you to skip the "guesswork" phase and select models that are guaranteed to work on your hardware.
 
 === 2. Hardware Sizing (The Math)
 We will teach you the formula to calculate the true cost of a model.
@@ -73,18 +73,3 @@ To successfully complete the hands-on sections of this course, you need:
 
 ---
 *The goal is efficient inference. Let's start by calculating the cost.*
-
-
-oc get pod -l serving.kserve.io/inferenceservice=granite3 \
-  -n model-deploy-lab \
-  -o jsonpath='{.items[0].spec.containers[0].args}'
-
-  export URL=$(oc get inferenceservice granite3 -n model-deploy-lab -o jsonpath='{.status.url}')
-
-curl -k $URL/v1 \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model": "granite3",
-    "prompt": "Write a haiku about GitOps.",
-    "max_tokens": 60
-  }'

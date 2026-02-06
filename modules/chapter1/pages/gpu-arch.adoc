@@ -63,4 +63,3 @@ The **Ada Lovelace** generation (L4, L40S) acts as a bridge. It is newer than Am
 | `FP8` (Native Acceleration)
 |===
 
-xref:hardware-sizing.adoc[Next: Calculate Your VRAM Requirements]

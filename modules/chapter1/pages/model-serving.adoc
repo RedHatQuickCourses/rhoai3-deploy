@@ -45,27 +45,32 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 
 ---
 [IMPORTANT]
-.Are you catching up?
+.Extracting the official nvidia vLLM serving runtime?
 ====
-Run this "One-Liner" instead
-Run this command once. It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace."
-
-Bash
+Run this "One-Liner" 
+It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace." where model-deploy-ab is the namespace.
++
+[source,bash]
+----
 oc process vllm-cuda-runtime-template -n redhat-ods-applications | oc apply -f - -n model-deploy-lab
+----
+
 ====
 
 1. Get the Inference URL
 Run this to grab the route directly from the KServe status:
 
-Bash
+B[source,bash]
+----
 export MODEL_URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
 echo "Targeting: $MODEL_URL"
-
+----
 
 2. Send the Request
 Since vLLM provides an OpenAI-compatible API, we hit the /v1/chat/completions endpoint.
 
-Bash
+[source,bash]
+----
 curl -k -X POST "https://granite-3b-predictor.model-deploy-lab.svc.cluster.local:8443/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
@@ -79,22 +84,7 @@ curl -k -X POST "https://granite-3b-predictor.model-deploy-lab.svc.cluster.local
     "temperature": 0.7,
     "max_tokens": 100
   }'
-
-  curl -k -X POST "$MODEL_URL/v1" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "granite-4-micro",
-    "messages": [
-      {
-        "role": "user", 
-        "content": "Write a haiku about open source software."
-      }
-    ],
-    "temperature": 0.7,
-    "max_tokens": 100
-  }'
-
-
+----
 
 
 == Step 2: The Architecture
@@ -116,9 +106,9 @@ It is designed to be idempotent—you can run it ten times, and it will simply e
 [source,bash]
 ----
 NAMESPACE="model-deploy-lab"
-MODEL_NAME="granite-4-micro"
-MODEL_PATH="granite4" 
-CONTEXT_LIMIT="8192"  # Tuned for Micro footprint
+MODEL_NAME="granite-3b"
+MODEL_PATH="granite3/" 
+CONTEXT_LIMIT="16000"  # Tuned for Micro footprint
 ----
 
 == Step 4: Execute the Deployment
