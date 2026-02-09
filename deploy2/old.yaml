@@ -1,0 +1,61 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite3b
+  namespace: model-deploy-lab
+  annotations:
+    openshift.io/display-name: "Granite 3.3 8B Instruct"
+    
+    # --- UI-STYLE: SECURITY ENABLED ---
+    security.opendatahub.io/enable-auth: "true"
+    
+    # --- UI-STYLE: HARDWARE PROFILE ---
+    # This tells the UI which "T-Shirt Size" is selected
+    opendatahub.io/hardware-profile-name: gpu-profile
+    
+    serving.kserve.io/deploymentMode: RawDeployment
+    # Refers to the template we extracted via CLI
+    serving.kserve.io/runtime: vllm-cuda-runtime
+    
+  labels:
+    networking.kserve.io/visibility: exposed
+    opendatahub.io/dashboard: "true"
+spec:
+  predictor:
+    serviceAccountName: granite-sa
+    model:
+      modelFormat:
+        name: vLLM
+      
+      # Refers to the template we extracted via CLI
+      runtime: vllm-cuda-runtime
+      
+      # --- UI-STYLE: STORAGE KEY ---
+      # Looks up the secret 'minio-data-connection' and appends the path
+      storage:
+        key: models
+        path: granite3b
+      
+      # 8B Model Requirements
+      resources:
+        requests:
+          cpu: "4"
+          memory: "16Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: "24Gi"
+          nvidia.com/gpu: "1"
+      
+      args:
+        - "--model"
+        - "/mnt/models" 
+        - "--port"
+        - "8080"
+        # 8B is larger; we reduce context to 4k or 8k to fit on standard GPUs
+        - "--max-model-len"
+        - "8192"
+        - "--gpu-memory-utilization"
+        - "0.9"
+        - "--distributed-executor-backend"
+        - "mp"

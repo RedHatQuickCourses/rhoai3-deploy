@@ -15,10 +15,9 @@ To size an inference node correctly, you must account for the **Model Weights** 
 
 == The Formula
 
-[stem]
-++++
-Total VRAM = (Weights \times 1.2) + (KV Cache)
-++++
+
+=== Total VRAM = (Weights \times 1.2) + (KV Cache)
+
 
 === Part 1: The Static Cost (Model Weights)
 This is the "rent" you pay just to turn the model on.

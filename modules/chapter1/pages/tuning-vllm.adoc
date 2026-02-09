@@ -9,12 +9,12 @@
 [.lead]
 *Default settings are for tourists. Engineers tune their engines.*
 
-In Module 2, we calculated that a Granite-8B model needs ~19GB of weights and ~20GB of KV Cache (at full 128k context).
+In section 2, we calculated that a Granite-8B model needs ~19GB of weights and ~20GB of KV Cache (at full 128k context).
 If you deploy this on an NVIDIA A10G (24GB) using default settings, **it will crash**.
 
 Why? Because vLLM defaults to utilizing 90% of the GPU and attempts to reserve space for the model's *maximum possible context*.
 
-To make it fit, you must apply the **Safety Valve**.
+To make it fit, you must limit **KV cache*.
 
 == 1. The Safety Valve: `--max-model-len`
 

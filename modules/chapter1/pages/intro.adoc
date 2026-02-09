@@ -34,6 +34,14 @@ In this course, we will break down the black box of model serving into a repeata
 You don't have to benchmark 900,000 models from scratch.
 We will explore tools like the **Red Hat AI Validated Model Catalog**, which acts as a shortcut. It provides pre-vetted models with known performance profiles, allowing you to skip the "guesswork" phase and select models that are guaranteed to work on your hardware.
 
+[NOTE]
+====
+.Model Catalog Simulation External Link
+https://redhatquickcourses.github.io/rhoai3-catalog[Catalog Click Through with Arcade, window=blank]
+
+ ** **Task:** Explore the Model Catalog layout, default models, and how using these are baselines can validate hardware performance expections and provide default tuning options to accelerate your AI Model inference cost-efficient deployments.
+====
+
 === 2. Hardware Sizing (The Math)
 We will teach you the formula to calculate the true cost of a model.
 

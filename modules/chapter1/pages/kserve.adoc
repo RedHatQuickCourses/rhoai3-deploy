@@ -5,7 +5,7 @@
 This guide documents the architectural progression of serving Large Language Models (LLMs) using KServe. It covers the transition from basic serverless concepts to the "RawDeployment" patterns preferred by OpenShift AI (RHOAI) for production workloads.
 
 
-== 1. KServe
+== KServe
 
 KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production.
 
@@ -17,14 +17,14 @@ Its core value proposition handles the infrastructure heavy lifting so engineers
 * **Standardized Protocol:** It uses the V2 Inference Protocol, meaning client code remains consistent even if the backend framework changes.
 * **Serverless Capabilities:** Historically, KServe is known for scaling replicas based on traffic, including "scaling to zero" to save costs.
 
-== 2. The Engine: KServe + vLLM
+== The Engine: KServe + vLLM
 
 For serving LLMs on Kubernetes, pairing **KServe** with **vLLM** is currently the industry standard.
 
 * **KServe (The Manager):** Handles networking, DNS, and autoscaling.
 * **vLLM (The Engine):** Handles the actual math and memory management. It is famous for _PagedAttention_, an algorithm that manages GPU memory much more efficiently than standard PyTorch, allowing for larger request batches.
 
-== 3. Configuration: The Template and The Instance
+== Configuration: The Template and The Instance
 
 To configure this setup, we must decouple the "how" from the "what" using two specific Kubernetes resources.
 
@@ -62,7 +62,7 @@ The `InferenceService` tells KServe *which* specific model to deploy using the t
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: llama-32-prod
+  name: grantite3b
 spec:
   predictor:
     model:
@@ -70,7 +70,7 @@ spec:
         name: vLLM
       # Point to the specific version folder (e.g., /v1.0) so the Storage Initializer
       # doesn't download unnecessary files from the parent bucket.
-      storageUri: "s3://my-bucket/llama2/v1.0"
+      storageUri: "s3://models/granite3b/v1.0"
       runtime: vllm-runtime
       # We must explicitly request GPUs. Setting limit and request to "1"
       # tells Kubernetes to find a node with exactly one available GPU.
@@ -81,7 +81,7 @@ spec:
           nvidia.com/gpu: "1"
 ----
 
-== 4. Deployment Modes: Serverless vs. RawDeployment
+== Deployment Modes: Serverless vs. RawDeployment
 
 KServe offers two primary deployment modes. While Serverless is the default, **RawDeployment** is often preferred for enterprise LLM workloads (like OpenShift AI).
 
@@ -114,7 +114,7 @@ In production scenarios, `RawDeployment` is the workhorse for three reasons:
 2.  **GPU Scarcity:** If you scale to zero, you release your GPU. In a busy cluster, another team might grab it before you scale back up.
 3.  **Protocol Stability:** Removing the complex Knative proxies improves the stability of long-running streaming responses (token-by-token generation).
 
-== 5. Day 2 Operations: Metrics & Observability
+== Day 2 Operations: Metrics & Observability
 
 Running an LLM without metrics is dangerous. For vLLM, metrics are critical for monitoring **GPU Memory Management**.
 
