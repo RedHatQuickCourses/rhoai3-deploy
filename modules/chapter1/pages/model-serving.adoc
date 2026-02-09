@@ -9,166 +9,156 @@
 [.lead]
 *Click-Ops does not scale. GitOps does.*
 
-In the previous modules, we selected the **Granite-8b** model and calculated the tuning parameters (`max-model-len=8192`) required to make it run safely on our hardware. Now, we must deploy it.
+In the previous modules, we prepared the environment using the "Fast Track" script. Now, we must deploy the **Granite 3.3 2B** model using a reproducible KServe manifest.
 
-You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo.
-But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?
+You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo. But this approach fails when you need to deploy 50 models or update configurations across multiple clusters.
 
-In this lab, we will deploy our tuned inference stack using a parameterized **Infrastructure-as-Code** script.
+In this lab, we will deploy our inference stack using **Infrastructure-as-Code**.
 
-== Step 1: Get the Lab Materials
+toc::[]
 
-To begin, we need to acquire the automation scripts. We have packaged the entire "Serving Factory" into a Git repository.
+== Step 1: Prerequisites
 
-. **Open your OpenShift Terminal.**
-. **Clone the repository:**
+Before proceeding, verify that your "Fast Track" script successfully populated the vault.
+
+. **Check the S3 Bucket:**
 +
 [source,bash]
 ----
-git clone https://github.com/RedHatQuickCourses/rhoai3-deploy.git
+# Verify the model files exist in the 'models' bucket
+oc exec -n model-deploy-lab deployment/minio -- ls /data/models/granite3
 ----
-. **Switch to the lab directory:**
++
+*Expected Output:* You should see files like `config.json`, `tokenizer.json`, and `*.safetensors`.
+
+. **Check the Data Connection:**
 +
 [source,bash]
 ----
-cd rhoai3-deploy
+# Verify the KServe storage secret exists
+oc get secret storage-config -n model-deploy-lab
 ----
 
-[IMPORTANT]
-.Are you catching up?
-====
-If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
-Before proceeding, you must ensure the model is downloaded and the storage is configured.
-**xref:fast-track.adoc[Click here to run the Fast Track Setup Script]** to get your environment ready in 2 minutes.
-====
+== Step 2: The Runtime (The Engine)
 
----
-[IMPORTANT]
-.Extracting the official nvidia vLLM serving runtime?
-====
-Run this "One-Liner" 
-It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace." where model-deploy-ab is the namespace.
+RHOAI includes a certified vLLM runtime template. Instead of writing one from scratch, we will extract the official template from the cluster and install it in our namespace.
+
+. **Extract and Apply the Runtime:**
 +
 [source,bash]
 ----
-oc process vllm-cuda-runtime-template -n redhat-ods-applications | oc apply -f - -n model-deploy-lab
+oc process vllm-cuda-runtime-template -n redhat-ods-applications | \
+oc apply -f - -n model-deploy-lab
 ----
 
-====
-
-1. Get the Inference URL
-Run this to grab the route directly from the KServe status:
-
-B[source,bash]
+. **Verify the Runtime:**
++
+[source,bash]
 ----
-export MODEL_URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
+oc get servingruntime vllm-cuda-runtime -n model-deploy-lab
+----
+
+== Step 3: The Deployment (The Workload)
+
+We will now create the `InferenceService`. This Custom Resource binds our **Runtime** (the engine) to our **Storage** (the fuel).
+
+. **Create the Manifest:**
++
+Copy the following YAML to a file named `granite3-isvc.yaml`.
++
+[source,yaml]
+----
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite3
+  namespace: model-deploy-lab
+  annotations:
+    # "RawDeployment" mode bypasses Serverless to prevent cold starts
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    model:
+      # The Format must match what the Runtime supports (vLLM)
+      modelFormat:
+        name: vLLM
+      # This name must match the runtime extracted in Step 2
+      runtime: vllm-cuda-runtime
+      # The path to your model in MinIO (s3://bucket/folder)
+      storageUri: s3://models/granite3
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          memory: "8Gi"
+        limits:
+          nvidia.com/gpu: "1"
+          memory: "10Gi"
+----
+
+. **Apply the Deployment:**
++
+[source,bash]
+----
+oc apply -f granite3-isvc.yaml
+----
+
+. **Wait for Readiness:**
++
+This process can take 2-5 minutes as the vLLM engine initializes and loads the weights into GPU memory.
++
+[source,bash]
+----
+oc wait --for=condition=Ready inferenceservice/granite3 -n model-deploy-lab --timeout=300s
+----
+
+== Step 4: Validate the API
+
+Once the model is ready, we can test it using the OpenAI-compatible API provided by vLLM.
+
+. **Retrieve the Inference URL:**
++
+[source,bash]
+----
+export MODEL_URL=$(oc get inferenceservice granite3 -n model-deploy-lab -o jsonpath='{.status.url}')
 echo "Targeting: $MODEL_URL"
 ----
 
-2. Send the Request
-Since vLLM provides an OpenAI-compatible API, we hit the /v1/chat/completions endpoint.
-
+. **Send a Chat Completion Request:**
++
 [source,bash]
 ----
-curl -k -X POST "https://granite-3b-predictor.model-deploy-lab.svc.cluster.local:8443/v1/chat/completions" \
+curl -k -X POST "$MODEL_URL/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "granite-3b",
+    "model": "granite3",
     "messages": [
       {
-        "role": "user", 
-        "content": "Write a haiku about open source software."
+        "role": "user",
+        "content": "Write a haiku about deploying AI on Kubernetes."
       }
     ],
     "temperature": 0.7,
-    "max_tokens": 100
+    "max_tokens": 50
   }'
 ----
 
-
-== Step 2: The Architecture
-
-Our script (`deploy/deploy-serve.sh`) automates the creation of two critical Kubernetes Custom Resources (CRs) in the `model-deploy-lab` namespace:
-
-1.  **The ServingRuntime (The Engine):**
-    * Defines the *What* (vLLM image, port 8080).
-    * Defines the *How* (Tuning arguments like `max-model-len`).
-2.  **The InferenceService (The Workload):**
-    * Binds the Engine to the Data Connection named `models` (Path: `granite4`).
-    * Requests the specific hardware (1 NVIDIA GPU).
-
-== Step 3: Inspect the Automation
-
-It is designed to be idempotent—you can run it ten times, and it will simply ensure the state matches your intent.
-
-.Key Configuration Block (deploy/deploy-serve.sh)
-[source,bash]
+*Expected Output:*
+[source,json]
 ----
-NAMESPACE="model-deploy-lab"
-MODEL_NAME="granite-3b"
-MODEL_PATH="granite3/" 
-CONTEXT_LIMIT="16000"  # Tuned for Micro footprint
+{
+  "id": "cmpl-...",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "granite3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Pods rise in the cloud,\nGPUs hum with quiet power,\nCode serves thought to all."
+      },
+      "finish_reason": "stop"
+    }
+  ]
+}
 ----
-
-== Step 4: Execute the Deployment
-
-. **Run the deployment script:**
-+
-[source,bash]
-----
-chmod u+x deploy/deploy-serve.sh
-./deploy/deploy-serve.sh
-----
-. **Watch the Output:**
-    * You will see it create the `ServingRuntime`.
-    * You will see it create the `InferenceService`.
-    * It will then enter a wait loop, checking the Kubernetes status until the model is fully loaded into GPU memory.
-
-*Expected Result:*
-`✅ SUCCESS: Model is Serving!`
-
-== Step 5: Validate the Tuning
-
-Let's prove that our tuning parameters actually applied.
-
-. **Check the Pod Arguments:**
-+
-[source,bash]
-----
-oc get pod -l serving.kserve.io/inferenceservice=granite-4-micro \
-  -n model-deploy-lab \
-  -o jsonpath='{.items[0].spec.containers[0].args}'
-----
-* *Verify:* Look for `"--max-model-len=8192"`. If this is present, your "Safety Valve" is active.
-
-. **Test the API:**
-The script outputs a `curl` command. Run it to confirm the model is reasoning.
-+
-[source,bash]
-----
-# Get the URL dynamically
-export URL=$(oc get inferenceservice granite3 -n my-first-model -o jsonpath='{.status.url}')
-
-# Send a prompt
-curl -k $URL/v1/completions \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model": "granite3",
-    "prompt": "Write a haiku about GitOps.",
-    "max_tokens": 60
-  }'
-----
-
-xref:course-summary.adoc[Next: Course Summary]
-
-
-curl -k -X POST "https://$MODEL_URL/v1" \
-     -H "Authorization: Bearer $MODEL_TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "model": "granite3",
-       "messages": [
-         {"role": "user", "content": "Write a hello world python function."}
-       ],
-       "max_tokens": 50
-     }'
