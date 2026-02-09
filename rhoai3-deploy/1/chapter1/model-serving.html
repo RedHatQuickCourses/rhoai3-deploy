@@ -110,7 +110,54 @@
 <p><strong>Click-Ops does not scale. GitOps does.</strong></p>
 </div>
 <div class="paragraph">
-<p>In the previous modules, we prepared the environment using the "Fast Track" script. Now, we must deploy the <strong>Granite 3.3 2B</strong> model using a reproducible KServe manifest.</p>
+<p>To begin, we need to acquire the automation scripts. We have packaged the entire "Serving Factory" into a Git repository.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Open your OpenShift Terminal.</strong></p>
+</li>
+<li>
+<p><strong>Clone the repository:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">git clone https://github.com/RedHatQuickCourses/rhoai3-deploy.git</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p><strong>Switch to the lab directory:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd rhoai3-deploy</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="title">Are you catching up?</div>
+<div class="paragraph">
+<p>If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
+Before proceeding, you must ensure the model is downloaded and the storage is configured.
+<strong><a href="fast-track.html" class="xref page">Click here to run the Fast Track Setup Script</a></strong> to get your environment ready in 2 minutes.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Now, we must deploy the <strong>Granite 3.3 2B</strong> model using a reproducible KServe manifest.</p>
+</li>
+</ol>
 </div>
 <div class="paragraph">
 <p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo. But this approach fails when you need to deploy 50 models or update configurations across multiple clusters.</p>
@@ -318,6 +365,9 @@ echo "Targeting: $MODEL_URL"</code></pre>
   ]
 }</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p><a href="#course-summary.adoc" class="xref unresolved">Next: Course Summary</a></p>
 </div>
 </div>
 </div>
