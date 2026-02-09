@@ -9,7 +9,31 @@
 [.lead]
 *Click-Ops does not scale. GitOps does.*
 
-In the previous modules, we prepared the environment using the "Fast Track" script. Now, we must deploy the **Granite 3.3 2B** model using a reproducible KServe manifest.
+To begin, we need to acquire the automation scripts. We have packaged the entire "Serving Factory" into a Git repository.
+
+. **Open your OpenShift Terminal.**
+. **Clone the repository:**
++
+[source,bash]
+----
+git clone https://github.com/RedHatQuickCourses/rhoai3-deploy.git
+----
+. **Switch to the lab directory:**
++
+[source,bash]
+----
+cd rhoai3-deploy
+----
+
+[IMPORTANT]
+.Are you catching up?
+====
+If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
+Before proceeding, you must ensure the model is downloaded and the storage is configured.
+**xref:fast-track.adoc[Click here to run the Fast Track Setup Script]** to get your environment ready in 2 minutes.
+====
+
+. Now, we must deploy the **Granite 3.3 2B** model using a reproducible KServe manifest.
 
 You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo. But this approach fails when you need to deploy 50 models or update configurations across multiple clusters.
 
@@ -162,3 +186,5 @@ curl -k -X POST "$MODEL_URL/v1/chat/completions" \
   ]
 }
 ----
+
+xref:course-summary.adoc[Next: Course Summary]
