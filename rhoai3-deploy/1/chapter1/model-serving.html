@@ -110,265 +110,186 @@
 <p><strong>Click-Ops does not scale. GitOps does.</strong></p>
 </div>
 <div class="paragraph">
-<p>In the previous modules, we selected the <strong>Granite-8b</strong> model and calculated the tuning parameters (<code>max-model-len=8192</code>) required to make it run safely on our hardware. Now, we must deploy it.</p>
+<p>In the previous modules, we prepared the environment using the "Fast Track" script. Now, we must deploy the <strong>Granite 3.3 2B</strong> model using a reproducible KServe manifest.</p>
 </div>
 <div class="paragraph">
-<p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo.
-But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?</p>
+<p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo. But this approach fails when you need to deploy 50 models or update configurations across multiple clusters.</p>
 </div>
 <div class="paragraph">
-<p>In this lab, we will deploy our tuned inference stack using a parameterized <strong>Infrastructure-as-Code</strong> script.</p>
+<p>In this lab, we will deploy our inference stack using <strong>Infrastructure-as-Code</strong>.</p>
+</div>
+<div id="toc" class="toc">
+<div id="toctitle" class="title">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_step_1_prerequisites">Step 1: Prerequisites</a></li>
+<li><a href="#_step_2_the_runtime_the_engine">Step 2: The Runtime (The Engine)</a></li>
+<li><a href="#_step_3_the_deployment_the_workload">Step 3: The Deployment (The Workload)</a></li>
+<li><a href="#_step_4_validate_the_api">Step 4: Validate the API</a></li>
+</ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_step_1_get_the_lab_materials"><a class="anchor" href="#_step_1_get_the_lab_materials"></a>Step 1: Get the Lab Materials</h2>
+<h2 id="_step_1_prerequisites"><a class="anchor" href="#_step_1_prerequisites"></a>Step 1: Prerequisites</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>To begin, we need to acquire the automation scripts. We have packaged the entire "Serving Factory" into a Git repository.</p>
+<p>Before proceeding, verify that your "Fast Track" script successfully populated the vault.</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p><strong>Open your OpenShift Terminal.</strong></p>
-</li>
-<li>
-<p><strong>Clone the repository:</strong></p>
+<p><strong>Check the S3 Bucket:</strong></p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">git clone https://github.com/RedHatQuickCourses/rhoai3-deploy.git</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify the model files exist in the 'models' bucket
+oc exec -n model-deploy-lab deployment/minio -- ls /data/models/granite3</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p><strong>Expected Output:</strong> You should see files like <code>config.json</code>, <code>tokenizer.json</code>, and <code>*.safetensors</code>.</p>
 </div>
 </li>
 <li>
-<p><strong>Switch to the lab directory:</strong></p>
+<p><strong>Check the Data Connection:</strong></p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd rhoai3-deploy</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify the KServe storage secret exists
+oc get secret storage-config -n model-deploy-lab</code></pre>
 </div>
 </div>
 </li>
 </ol>
 </div>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="title">Are you catching up?</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_2_the_runtime_the_engine"><a class="anchor" href="#_step_2_the_runtime_the_engine"></a>Step 2: The Runtime (The Engine)</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
-Before proceeding, you must ensure the model is downloaded and the storage is configured.
-<strong><a href="fast-track.html" class="xref page">Click here to run the Fast Track Setup Script</a></strong> to get your environment ready in 2 minutes.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<hr>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="title">Extracting the official nvidia vLLM serving runtime?</div>
-<div class="paragraph">
-<p>Run this "One-Liner"
-It asks the cluster: "Hey, give me the official vLLM NVIDIA runtime configuration and install it in my namespace." where model-deploy-ab is the namespace.</p>
-</div>
-<div class="paragraph">
-<p>+</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc process vllm-cuda-runtime-template -n redhat-ods-applications | oc apply -f - -n model-deploy-lab</code></pre>
-</div>
-</div>
-</td>
-</tr>
-</table>
+<p>RHOAI includes a certified vLLM runtime template. Instead of writing one from scratch, we will extract the official template from the cluster and install it in our namespace.</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Get the Inference URL
-Run this to grab the route directly from the KServe status:</p>
+<p><strong>Extract and Apply the Runtime:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc process vllm-cuda-runtime-template -n redhat-ods-applications | \
+oc apply -f - -n model-deploy-lab</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p><strong>Verify the Runtime:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get servingruntime vllm-cuda-runtime -n model-deploy-lab</code></pre>
+</div>
+</div>
 </li>
 </ol>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_3_the_deployment_the_workload"><a class="anchor" href="#_step_3_the_deployment_the_workload"></a>Step 3: The Deployment (The Workload)</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>B[source,bash]</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre>export MODEL_URL=$(oc get inferenceservice granite-4-micro -n model-deploy-lab -o jsonpath='{.status.url}')
-echo "Targeting: $MODEL_URL"</pre>
-</div>
+<p>We will now create the <code>InferenceService</code>. This Custom Resource binds our <strong>Runtime</strong> (the engine) to our <strong>Storage</strong> (the fuel).</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Send the Request
-Since vLLM provides an OpenAI-compatible API, we hit the /v1/chat/completions endpoint.</p>
-</li>
-</ol>
+<p><strong>Create the Manifest:</strong></p>
+<div class="paragraph">
+<p>Copy the following YAML to a file named <code>granite3-isvc.yaml</code>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -k -X POST "https://granite-3b-predictor.model-deploy-lab.svc.cluster.local:8443/v1/chat/completions" \
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite3
+  namespace: model-deploy-lab
+  annotations:
+    # "RawDeployment" mode bypasses Serverless to prevent cold starts
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    model:
+      # The Format must match what the Runtime supports (vLLM)
+      modelFormat:
+        name: vLLM
+      # This name must match the runtime extracted in Step 2
+      runtime: vllm-cuda-runtime
+      # The path to your model in MinIO (s3://bucket/folder)
+      storageUri: s3://models/granite3
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          memory: "8Gi"
+        limits:
+          nvidia.com/gpu: "1"
+          memory: "10Gi"</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p><strong>Apply the Deployment:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f granite3-isvc.yaml</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p><strong>Wait for Readiness:</strong></p>
+<div class="paragraph">
+<p>This process can take 2-5 minutes as the vLLM engine initializes and loads the weights into GPU memory.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc wait --for=condition=Ready inferenceservice/granite3 -n model-deploy-lab --timeout=300s</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_step_4_validate_the_api"><a class="anchor" href="#_step_4_validate_the_api"></a>Step 4: Validate the API</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Once the model is ready, we can test it using the OpenAI-compatible API provided by vLLM.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>Retrieve the Inference URL:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export MODEL_URL=$(oc get inferenceservice granite3 -n model-deploy-lab -o jsonpath='{.status.url}')
+echo "Targeting: $MODEL_URL"</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p><strong>Send a Chat Completion Request:</strong></p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -k -X POST "$MODEL_URL/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "granite-3b",
+    "model": "granite3",
     "messages": [
       {
         "role": "user",
-        "content": "Write a haiku about open source software."
+        "content": "Write a haiku about deploying AI on Kubernetes."
       }
     ],
     "temperature": 0.7,
-    "max_tokens": 100
-  }'</code></pre>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_step_2_the_architecture"><a class="anchor" href="#_step_2_the_architecture"></a>Step 2: The Architecture</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Our script (<code>deploy/deploy-serve.sh</code>) automates the creation of two critical Kubernetes Custom Resources (CRs) in the <code>model-deploy-lab</code> namespace:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>The ServingRuntime (The Engine):</strong></p>
-<div class="ulist">
-<ul>
-<li>
-<p>Defines the <strong>What</strong> (vLLM image, port 8080).</p>
-</li>
-<li>
-<p>Defines the <strong>How</strong> (Tuning arguments like <code>max-model-len</code>).</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p><strong>The InferenceService (The Workload):</strong></p>
-<div class="ulist">
-<ul>
-<li>
-<p>Binds the Engine to the Data Connection named <code>models</code> (Path: <code>granite4</code>).</p>
-</li>
-<li>
-<p>Requests the specific hardware (1 NVIDIA GPU).</p>
-</li>
-</ul>
-</div>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_step_3_inspect_the_automation"><a class="anchor" href="#_step_3_inspect_the_automation"></a>Step 3: Inspect the Automation</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>It is designed to be idempotent—you can run it ten times, and it will simply ensure the state matches your intent.</p>
-</div>
-<div class="listingblock">
-<div class="title">Key Configuration Block (deploy/deploy-serve.sh)</div>
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAMESPACE="model-deploy-lab"
-MODEL_NAME="granite-3b"
-MODEL_PATH="granite3/"
-CONTEXT_LIMIT="16000"  # Tuned for Micro footprint</code></pre>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_step_4_execute_the_deployment"><a class="anchor" href="#_step_4_execute_the_deployment"></a>Step 4: Execute the Deployment</h2>
-<div class="sectionbody">
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Run the deployment script:</strong></p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">chmod u+x deploy/deploy-serve.sh
-./deploy/deploy-serve.sh</code></pre>
-</div>
-</div>
-</li>
-<li>
-<p><strong>Watch the Output:</strong></p>
-<div class="ulist">
-<ul>
-<li>
-<p>You will see it create the <code>ServingRuntime</code>.</p>
-</li>
-<li>
-<p>You will see it create the <code>InferenceService</code>.</p>
-</li>
-<li>
-<p>It will then enter a wait loop, checking the Kubernetes status until the model is fully loaded into GPU memory.</p>
-</li>
-</ul>
-</div>
-</li>
-</ol>
-</div>
-<div class="paragraph">
-<p><strong>Expected Result:</strong>
-<code>✅ SUCCESS: Model is Serving!</code></p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_step_5_validate_the_tuning"><a class="anchor" href="#_step_5_validate_the_tuning"></a>Step 5: Validate the Tuning</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Let&#8217;s prove that our tuning parameters actually applied.</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Check the Pod Arguments:</strong></p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pod -l serving.kserve.io/inferenceservice=granite-4-micro \
-  -n model-deploy-lab \
-  -o jsonpath='{.items[0].spec.containers[0].args}'</code></pre>
-</div>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Verify:</strong> Look for <code>"--max-model-len=8192"</code>. If this is present, your "Safety Valve" is active.</p>
-</li>
-</ul>
-</div>
-</li>
-<li>
-<p><strong>Test the API:</strong>
-The script outputs a <code>curl</code> command. Run it to confirm the model is reasoning.</p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Get the URL dynamically
-export URL=$(oc get inferenceservice granite3 -n my-first-model -o jsonpath='{.status.url}')
-
-# Send a prompt
-curl -k $URL/v1/completions \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model": "granite3",
-    "prompt": "Write a haiku about GitOps.",
-    "max_tokens": 60
+    "max_tokens": 50
   }'</code></pre>
 </div>
 </div>
@@ -376,19 +297,27 @@ curl -k $URL/v1/completions \
 </ol>
 </div>
 <div class="paragraph">
-<p><a href="#course-summary.adoc" class="xref unresolved">Next: Course Summary</a></p>
+<p><strong>Expected Output:</strong></p>
 </div>
-<div class="paragraph">
-<p>curl -k -X POST "https://$MODEL_URL/v1" \
-     -H "Authorization: Bearer $MODEL_TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "model": "granite3",
-       "messages": [
-         {"role": "user", "content": "Write a hello world python function."}
-       ],
-       "max_tokens": 50
-     }'</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "id": "cmpl-...",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "granite3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Pods rise in the cloud,\nGPUs hum with quiet power,\nCode serves thought to all."
+      },
+      "finish_reason": "stop"
+    }
+  ]
+}</code></pre>
+</div>
 </div>
 </div>
 </div>
