@@ -112,7 +112,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="_1_kserve"><a class="anchor" href="#_1_kserve"></a>1. KServe</h2>
+<h2 id="_kserve"><a class="anchor" href="#_kserve"></a>KServe</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production.</p>
@@ -139,7 +139,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="_2_the_engine_kserve_vllm"><a class="anchor" href="#_2_the_engine_kserve_vllm"></a>2. The Engine: KServe + vLLM</h2>
+<h2 id="_the_engine_kserve_vllm"><a class="anchor" href="#_the_engine_kserve_vllm"></a>The Engine: KServe + vLLM</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>For serving LLMs on Kubernetes, pairing <strong>KServe</strong> with <strong>vLLM</strong> is currently the industry standard.</p>
@@ -157,7 +157,7 @@
 </div>
 </div>
 <div class="sect1">
-<h2 id="_3_configuration_the_template_and_the_instance"><a class="anchor" href="#_3_configuration_the_template_and_the_instance"></a>3. Configuration: The Template and The Instance</h2>
+<h2 id="_configuration_the_template_and_the_instance"><a class="anchor" href="#_configuration_the_template_and_the_instance"></a>Configuration: The Template and The Instance</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>To configure this setup, we must decouple the "how" from the "what" using two specific Kubernetes resources.</p>
@@ -200,7 +200,7 @@ spec:
 <pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: llama-32-prod
+  name: grantite3b
 spec:
   predictor:
     model:
@@ -208,7 +208,7 @@ spec:
         name: vLLM
       # Point to the specific version folder (e.g., /v1.0) so the Storage Initializer
       # doesn't download unnecessary files from the parent bucket.
-      storageUri: "s3://my-bucket/llama2/v1.0"
+      storageUri: "s3://models/granite3b/v1.0"
       runtime: vllm-runtime
       # We must explicitly request GPUs. Setting limit and request to "1"
       # tells Kubernetes to find a node with exactly one available GPU.
@@ -223,7 +223,7 @@ spec:
 </div>
 </div>
 <div class="sect1">
-<h2 id="_4_deployment_modes_serverless_vs_rawdeployment"><a class="anchor" href="#_4_deployment_modes_serverless_vs_rawdeployment"></a>4. Deployment Modes: Serverless vs. RawDeployment</h2>
+<h2 id="_deployment_modes_serverless_vs_rawdeployment"><a class="anchor" href="#_deployment_modes_serverless_vs_rawdeployment"></a>Deployment Modes: Serverless vs. RawDeployment</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>KServe offers two primary deployment modes. While Serverless is the default, <strong>RawDeployment</strong> is often preferred for enterprise LLM workloads (like OpenShift AI).</p>
@@ -286,7 +286,7 @@ spec:
 </div>
 </div>
 <div class="sect1">
-<h2 id="_5_day_2_operations_metrics_observability"><a class="anchor" href="#_5_day_2_operations_metrics_observability"></a>5. Day 2 Operations: Metrics &amp; Observability</h2>
+<h2 id="_day_2_operations_metrics_observability"><a class="anchor" href="#_day_2_operations_metrics_observability"></a>Day 2 Operations: Metrics &amp; Observability</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Running an LLM without metrics is dangerous. For vLLM, metrics are critical for monitoring <strong>GPU Memory Management</strong>.</p>
