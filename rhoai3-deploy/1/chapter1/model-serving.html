@@ -110,8 +110,10 @@
 <p><strong>Click-Ops does not scale. GitOps does.</strong></p>
 </div>
 <div class="paragraph">
-<p>In the previous modules, we selected the <strong>granite-3.3-2b-instruct</strong> model and calculated the tuning parameters (<code>max-model-len=16000</code>) required to make it run safely on our hardware.
-Now, we must deploy it.</p>
+<p>In the previous modules, we selected the <strong>Granite-8B (FP16)</strong> model and calculated the tuning parameters (<code>max-model-len=8000</code>) required to make it run safely on our hardware.</p>
+</div>
+<div class="paragraph">
+<p>Now, we&#8217;re using the <strong>granite-3.3-2b-instruct</strong>, it&#8217;s .75% smaller and faster experience.</p>
 </div>
 <div class="paragraph">
 <p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo.</p>
@@ -120,7 +122,7 @@ Now, we must deploy it.</p>
 <p>But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?</p>
 </div>
 <div class="paragraph">
-<p>In this lab, We will deploy our tuned inference stack using a parameterized <strong>Infrastructure-as-Code</strong> script.</p>
+<p>In this lab, We will deploy our tuned inference stack using a parameterized <strong>Infrastructure-as-Code</strong> scripts.</p>
 </div>
 </div>
 </div>
@@ -223,15 +225,6 @@ It does not support gated models (like Llama 3) that require a Hugging Face Toke
 <div class="sect1">
 <h2 id="_model_inference"><a class="anchor" href="#_model_inference"></a>Model Inference</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Now, we must deploy the <strong>Granite 3.3 2B</strong> model using a reproducible KServe manifest.</p>
-</div>
-<div class="paragraph">
-<p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo. But this approach fails when you need to deploy 50 models or update configurations across multiple clusters.</p>
-</div>
-<div class="paragraph">
-<p>In this lab, we will deploy our inference stack using <strong>Infrastructure-as-Code</strong>.</p>
-</div>
 <div class="sect2">
 <h3 id="_step_1_prerequisites"><a class="anchor" href="#_step_1_prerequisites"></a>Step 1: Prerequisites</h3>
 <div class="paragraph">
@@ -302,14 +295,14 @@ oc apply -f - -n model-deploy-lab</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_create_an_secret_to_access_the_models_files"><a class="anchor" href="#_create_an_secret_to_access_the_models_files"></a>Create an Secret to Access the Models Files</h2>
+<h2 id="_create_a_secret_to_access_the_models_files"><a class="anchor" href="#_create_a_secret_to_access_the_models_files"></a>Create a Secret to Access the Models Files</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>In order to read the model files from the "vault" storage, we need a storage-config, which is stored as a kubernets secret.
 There is supplied file in the deploy folder called dataconn.yaml.  Apply this file to create the secret.</p>
 </div>
 <div class="listingblock">
-<div class="title">data-connection.yaml</div>
+<div class="title">dataconn.yaml</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">apiVersion: v1
 kind: Secret
@@ -336,14 +329,15 @@ stringData:
 </div>
 </div>
 <div class="listingblock">
-<div class="title">deploy and link the accounts.yaml</div>
+<div class="title">deploy the storage secret for use by the deployment</div>
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># 1. Apply the corrected secret
-oc apply -f ./deploy/dataconn.yaml
-
-# 2. Link it to the Service Account your inference service is using
-# (Assuming your inference service uses 'fast-track-sa' based on previous steps)
-oc secret link fast-track-sa models-connection</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f ./deploy/dataconn.yaml</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">links data-connection to fast-track service account</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc secret link fast-track-sa models-connection</code></pre>
 </div>
 </div>
 </div>
@@ -462,11 +456,22 @@ echo "Targeting: $MODEL_URL"</code></pre>
 }</code></pre>
 </div>
 </div>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="_thats_a_wrap"><a class="anchor" href="#_thats_a_wrap"></a>That&#8217;s a Wrap</h3>
 <div class="paragraph">
-<p>This is one example of model inference using the built in runtime from the command line.</p>
+<p>This is one example of model inference using the built-in runtime from the command line.</p>
 </div>
 <div class="paragraph">
-<p>Based on your feedback, we&#8217;ll update this course accordingly: What type of model inference examples should be add to this course?</p>
+<p>Based on your feedback, we&#8217;ll update this course accordingly:</p>
+</div>
+<div class="paragraph">
+<p>What type of model inference examples should be add to this course?
+What additional features need to be supported such as tool calling templates?</p>
+</div>
+<div class="paragraph">
+<p>let use by <a href="https://github.com/RedHatQuickCourses/rhoai3-deploy/issues" target="blank">creating an issue in the course repository</a></p>
 </div>
 </div>
 </div>
