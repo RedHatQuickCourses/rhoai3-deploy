@@ -37,7 +37,7 @@ We will explore tools like the **Red Hat AI Validated Model Catalog**, which act
 [NOTE]
 ====
 .Model Catalog Simulation External Link
-https://redhatquickcourses.github.io/rhoai3-catalog[Catalog Click Through with Arcade, window=blank]
+https://redhatquickcourses.github.io/rhoai3-catalog/rhoai3-catalog/3.2/chapter1/section4.html[Catalog Click Through with Arcade, window=blank]
 
  ** **Task:** Explore the Model Catalog layout, default models, and how using these are baselines can validate hardware performance expections and provide default tuning options to accelerate your AI Model inference cost-efficient deployments.
 ====
@@ -59,9 +59,9 @@ You will learn to tune critical parameters like:
 Finally, we will abandon the "Click-Ops" dashboard.
 You will deploy a production-ready **InferenceService** using a parameterized script. This moves your infrastructure from "manual configuration" to "code," enabling reproducible and scalable deployments.
 
-== Our Laboratory Model: granite-3.3b-instruct
+== Our Laboratory Model: ibm-granite-3.3-2b-instruct
 
-To practice these concepts without requiring a massive GPU cluster, we will standardize on the **IBM granite-3.3b-instruct** model.
+To practice these concepts without requiring a massive GPU cluster, we will standardize on the **granite-3.3-2b-instruct** model.
 
 * **Why this model?**
 

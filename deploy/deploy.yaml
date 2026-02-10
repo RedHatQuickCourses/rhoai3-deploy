@@ -17,6 +17,10 @@ spec:
       runtime: vllm-cuda-runtime
       # The path to your model in MinIO (s3://bucket/folder)
       storageUri: s3://models/granite3
+      args:
+        - "--max-model-len=4096"        # Limits context to 4k to save VRAM
+        - "--gpu-memory-utilization=0.95" # Uses 95% of GPU (leaves 5% for overhead)
+      #  - "--distributed-executor-backend=mp" # Required for some multi-GPU setups
       resources:
         requests:
           nvidia.com/gpu: "1"
