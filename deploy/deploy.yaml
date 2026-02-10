@@ -4,16 +4,18 @@ metadata:
   name: granite3
   namespace: model-deploy-lab
   annotations:
+    # "RawDeployment" mode bypasses Serverless to prevent cold starts
     serving.kserve.io/deploymentMode: RawDeployment
 spec:
   predictor:
-    # vvvvv ADD THIS LINE vvvvv
     serviceAccountName: fast-track-sa
-    # ^^^^^^^^^^^^^^^^^^^^^^^^^
     model:
+      # The Format must match what the Runtime supports (vLLM)
       modelFormat:
         name: vLLM
+      # This name must match the runtime extracted in Step 2
       runtime: vllm-cuda-runtime
+      # The path to your model in MinIO (s3://bucket/folder)
       storageUri: s3://models/granite3
       resources:
         requests:
