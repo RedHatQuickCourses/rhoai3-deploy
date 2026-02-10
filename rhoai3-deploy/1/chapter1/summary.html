@@ -134,7 +134,7 @@
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><strong>1. Strategy</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Instead of grabbing random models, you selected <strong>Granite-4-micro</strong> from the <strong>Red Hat AI Validated Repository</strong>.
+<td class="tableblock halign-left valign-top"><p class="tableblock">Instead of grabbing random models, you selected <strong>granite-3.3-2b-instruct</strong> from the <strong>Red Hat AI Validated Repository</strong>.
 <strong>Result:</strong> You gained legal certainty (Apache 2.0) and performance predictability.</p></td>
 </tr>
 <tr>
@@ -154,7 +154,7 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><strong>5. Operations</strong></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">You abandoned the UI for a GitOps script (<code>deploy-serve.sh</code>) from the <code>rhoai3-deploy</code> repository.
+<td class="tableblock halign-left valign-top"><p class="tableblock">You abandoned the UI for a GitOps script (<code>deploy-model-yaml</code>) from the <code>rhoai3-deploy</code> repository.
 <strong>Result:</strong> Your deployment is now reproducible, version-controlled, and ready for automation.</p></td>
 </tr>
 </tbody>
@@ -177,14 +177,7 @@ Configure <strong>Prometheus</strong> to scrape the vLLM metrics port (<code>808
 <p><strong>Key Metric:</strong> <code>vllm:num_requests_running</code> (Concurrency) and <code>vllm:gpu_cache_usage_perc</code> (Are we running out of KV Cache?).</p>
 </li>
 <li>
-<p><strong>2. Autoscaling:</strong>
-Configure <strong>KNative</strong> to scale your pods based on concurrency.</p>
-</li>
-<li>
-<p><strong>Trigger:</strong> If <code>concurrency &gt; 10</code>, spin up a second GPU pod.</p>
-</li>
-<li>
-<p><strong>3. Quantization:</strong>
+<p><strong>2. Quantization:</strong>
 Explore the <strong>Quantization Labs</strong> (coming soon) to shrink your Granite-4 model to <strong>INT8</strong>.</p>
 </li>
 <li>

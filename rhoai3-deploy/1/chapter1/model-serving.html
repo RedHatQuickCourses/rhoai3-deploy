@@ -110,7 +110,25 @@
 <p><strong>Click-Ops does not scale. GitOps does.</strong></p>
 </div>
 <div class="paragraph">
-<p>To begin, we need to acquire the automation scripts. We have packaged the entire "Serving Factory" into a Git repository.</p>
+<p>In the previous modules, we selected the <strong>granite-3.3-2b-instruct</strong> model and calculated the tuning parameters (<code>max-model-len=16000</code>) required to make it run safely on our hardware.
+Now, we must deploy it.</p>
+</div>
+<div class="paragraph">
+<p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo.</p>
+</div>
+<div class="paragraph">
+<p>But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?</p>
+</div>
+<div class="paragraph">
+<p>In this lab, We will deploy our tuned inference stack using a parameterized <strong>Infrastructure-as-Code</strong> script.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_fast_track_to_model_deployment_setup"><a class="anchor" href="#_fast_track_to_model_deployment_setup"></a>Fast Track to Model Deployment Setup</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To begin, we need to acquire the automation scripts. We have packaged the entire "inference deployment" into a Git repository.</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
@@ -124,9 +142,6 @@
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">git clone https://github.com/RedHatQuickCourses/rhoai3-deploy.git</code></pre>
 </div>
 </div>
-</li>
-</ol>
-</div>
 <div class="paragraph">
 <p><strong>Switch to the lab directory:</strong></p>
 </div>
@@ -135,6 +150,10 @@
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd rhoai3-deploy</code></pre>
 </div>
 </div>
+</li>
+</ol>
+</div>
+<hr>
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -142,22 +161,70 @@
 <i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
-<div class="title">Are you catching up?</div>
 <div class="paragraph">
-<p>If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
-Before proceeding, you must ensure the model is downloaded and the storage is configured.
-<strong><a href="fast-track.html" class="xref page">Click here to run the Fast Track Setup Script</a></strong> to get your environment ready in 2 minutes.</p>
+<p>This utility automates the "grunt work" of the AI Engineer:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Deploys a MinIO Object Store ("The Vault").</p>
+</li>
+<li>
+<p>Creates a Data Connection in OpenShift AI.</p>
+</li>
+<li>
+<p>Downloads a model (<code>granite-3.3-2b-instruct</code>) and places it in the vault (S3 storage).</p>
+</li>
+<li>
+<p>Create a 'fast-track-sa' service account to access the storage.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>This script only works with <strong>Public/Ungated</strong> models (like IBM Granite 4.0 or Qwen 2.5).
+It does not support gated models (like Llama 3) that require a Hugging Face Token.</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_running_the_script"><a class="anchor" href="#_running_the_script"></a>Running the Script</h2>
+<div class="sectionbody">
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Now, we must deploy the <strong>Granite 3.3 2B</strong> model using a reproducible KServe manifest.</p>
+<p>Open your OpenShift Terminal.</p>
+</li>
+<li>
+<p>Navigate to the repository root.</p>
+</li>
+<li>
+<p>Execute the script:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">chmod u+x deploy/fast-track.sh
+./deploy/fast-track.sh</code></pre>
+</div>
+</div>
 </li>
 </ol>
+</div>
+<div class="sect2">
+<h3 id="_verification"><a class="anchor" href="#_verification"></a>Verification</h3>
+<div class="paragraph">
+<p>Once the script completes (look for <code>✅ SUCCESS</code>), verify the environment is ready for serving:</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_model_inference"><a class="anchor" href="#_model_inference"></a>Model Inference</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Now, we must deploy the <strong>Granite 3.3 2B</strong> model using a reproducible KServe manifest.</p>
 </div>
 <div class="paragraph">
 <p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo. But this approach fails when you need to deploy 50 models or update configurations across multiple clusters.</p>
@@ -165,13 +232,11 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <div class="paragraph">
 <p>In this lab, we will deploy our inference stack using <strong>Infrastructure-as-Code</strong>.</p>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_step_1_prerequisites"><a class="anchor" href="#_step_1_prerequisites"></a>Step 1: Prerequisites</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="_step_1_prerequisites"><a class="anchor" href="#_step_1_prerequisites"></a>Step 1: Prerequisites</h3>
 <div class="paragraph">
 <p>Before proceeding, verify that your "Fast Track" script successfully populated the vault.</p>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_check_the_s3_bucket"><a class="anchor" href="#_check_the_s3_bucket"></a><strong>Check the S3 Bucket:</strong></h3>
@@ -210,14 +275,35 @@ oc get secret storage-config -n model-deploy-lab</code></pre>
 oc apply -f - -n model-deploy-lab</code></pre>
 </div>
 </div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>To view the runtime config, leave off the:
+<strong> | \ oc apply -f - -n model-deploy-lab</strong>, from the previous command.</p>
 </div>
-<div class="sect2">
-<h3 id="_verify_the_runtime"><a class="anchor" href="#_verify_the_runtime"></a><strong>Verify the Runtime:</strong></h3>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p><strong>Verify the Runtime:</strong></p>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get servingruntime vllm-cuda-runtime -n model-deploy-lab</code></pre>
 </div>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_create_an_secret_to_access_the_models_files"><a class="anchor" href="#_create_an_secret_to_access_the_models_files"></a>Create an Secret to Access the Models Files</h2>
+<div class="sectionbody">
 <div class="listingblock">
 <div class="title">data-connection.yaml</div>
 <div class="content">
@@ -253,11 +339,7 @@ oc apply -f data-connection.yaml
 
 # 2. Link it to the Service Account your ISVC is using
 # (Assuming your ISVC uses 'fast-track-sa' based on previous steps)
-oc secret link fast-track-sa models-connection
-
-# 3. Trigger a restart of the pod
-oc delete pod -l serving.kserve.io/inferenceservice=granite3</code></pre>
-</div>
+oc secret link fast-track-sa models-connection</code></pre>
 </div>
 </div>
 </div>
@@ -352,9 +434,10 @@ echo "Targeting: $MODEL_URL"</code></pre>
 <div class="paragraph">
 <p><strong>Expected Output:</strong></p>
 </div>
-<div class="paragraph">
-<p>{
-  "id": "cmpl-&#8230;&#8203;",
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">{
+  "id": "cmpl-...",
   "object": "chat.completion",
   "created": 1700000000,
   "model": "granite3",
@@ -368,7 +451,8 @@ echo "Targeting: $MODEL_URL"</code></pre>
       "finish_reason": "stop"
     }
   ]
-}</p>
+}</code></pre>
+</div>
 </div>
 </div>
 </div>
