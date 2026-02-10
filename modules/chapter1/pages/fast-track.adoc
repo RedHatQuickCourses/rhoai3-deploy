@@ -11,7 +11,7 @@ If you want to jump straight to **Serving** without building the full Model Regi
 This utility automates the "grunt work" of the AI Engineer:
 1.  Deploys a MinIO Object Store ("The Vault").
 2.  Creates a Data Connection in OpenShift AI.
-3.  Downloads a model (`Granite-4-micro`) and places it in the vault.
+3.  Downloads a model (`granite-3.3-2b-instruct`) and places it in the vault (S3 storage).
 
 [IMPORTANT]
 .Ungated Models Only

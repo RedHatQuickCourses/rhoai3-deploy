@@ -21,7 +21,7 @@ You have now built a governed **AI Serving Factory**. Let's review the engineeri
 | Phase | The Engineering Decision
 
 | **1. Strategy**
-| Instead of grabbing random models, you selected **Granite-4-micro** from the **Red Hat AI Validated Repository**.
+| Instead of grabbing random models, you selected **granite-3.3-2b-instruct** from the **Red Hat AI Validated Repository**.
 *Result:* You gained legal certainty (Apache 2.0) and performance predictability.
 
 | **2. Architecture**
@@ -37,7 +37,7 @@ You have now built a governed **AI Serving Factory**. Let's review the engineeri
 *Result:* You created a "Safety Valve" that prevents OOM errors under high load.
 
 | **5. Operations**
-| You abandoned the UI for a GitOps script (`deploy-serve.sh`) from the `rhoai3-deploy` repository.
+| You abandoned the UI for a GitOps script (`deploy-model-yaml`) from the `rhoai3-deploy` repository.
 *Result:* Your deployment is now reproducible, version-controlled, and ready for automation.
 |===
 
@@ -50,12 +50,7 @@ Configure **Prometheus** to scrape the vLLM metrics port (`8080`).
 
  * *Key Metric:* `vllm:num_requests_running` (Concurrency) and `vllm:gpu_cache_usage_perc` (Are we running out of KV Cache?).
 
-* **2. Autoscaling:**
-Configure **KNative** to scale your pods based on concurrency.
-
- * *Trigger:* If `concurrency > 10`, spin up a second GPU pod.
-
-* **3. Quantization:**
+* **2. Quantization:**
 Explore the **Quantization Labs** (coming soon) to shrink your Granite-4 model to **INT8**.
 
  * *Goal:* Double your throughput on the same hardware.

@@ -9,7 +9,19 @@
 [.lead]
 *Click-Ops does not scale. GitOps does.*
 
-To begin, we need to acquire the automation scripts. We have packaged the entire "Serving Factory" into a Git repository.
+In the previous modules, we selected the **granite-3.3-2b-instruct** model and calculated the tuning parameters (`max-model-len=16000`) required to make it run safely on our hardware.
+Now, we must deploy it.
+
+You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo.
+
+But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?
+
+In this lab, We will deploy our tuned inference stack using a parameterized **Infrastructure-as-Code** script.
+
+
+== Fast Track to Model Deployment Setup
+
+To begin, we need to acquire the automation scripts. We have packaged the entire "inference deployment" into a Git repository.
 
 . **Open your OpenShift Terminal.**
 . **Clone the repository:**
@@ -18,30 +30,60 @@ To begin, we need to acquire the automation scripts. We have packaged the entire
 ----
 git clone https://github.com/RedHatQuickCourses/rhoai3-deploy.git
 ----
-
++
 **Switch to the lab directory:**
-
++
 [source,bash]
 ----
 cd rhoai3-deploy
 ----
 
+---
+
 [IMPORTANT]
-.Are you catching up?
 ====
-If you skipped the previous labs, your environment might be empty (no MinIO, no Model weights).
-Before proceeding, you must ensure the model is downloaded and the storage is configured.
-**xref:fast-track.adoc[Click here to run the Fast Track Setup Script]** to get your environment ready in 2 minutes.
+This utility automates the "grunt work" of the AI Engineer:
+
+ 1.  Deploys a MinIO Object Store ("The Vault").
+ 
+ 2.  Creates a Data Connection in OpenShift AI.
+
+ 3.  Downloads a model (`granite-3.3-2b-instruct`) and places it in the vault (S3 storage).
+
+ 4. Create a 'fast-track-sa' service account to access the storage. 
+
+This script only works with **Public/Ungated** models (like IBM Granite 4.0 or Qwen 2.5). 
+It does not support gated models (like Llama 3) that require a Hugging Face Token.
 ====
 
-. Now, we must deploy the **Granite 3.3 2B** model using a reproducible KServe manifest.
+== Running the Script
+
+1.  Open your OpenShift Terminal.
+2.  Navigate to the repository root.
+3.  Execute the script:
++
+[source,bash]
+----
+chmod u+x deploy/fast-track.sh
+./deploy/fast-track.sh
+----
+
+=== Verification
+
+Once the script completes (look for `✅ SUCCESS`), verify the environment is ready for serving:
+
+
+
+== Model Inference 
+
+Now, we must deploy the **Granite 3.3 2B** model using a reproducible KServe manifest.
 
 You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo. But this approach fails when you need to deploy 50 models or update configurations across multiple clusters.
 
 In this lab, we will deploy our inference stack using **Infrastructure-as-Code**.
 
 
-== Step 1: Prerequisites
+=== Step 1: Prerequisites
 
 Before proceeding, verify that your "Fast Track" script successfully populated the vault.
 
@@ -76,12 +118,20 @@ oc process vllm-cuda-runtime-template -n redhat-ods-applications | \
 oc apply -f - -n model-deploy-lab
 ----
 
-=== **Verify the Runtime:**
+[NOTE]
+====
+To view the runtime config, leave off the:
+** | \ oc apply -f - -n model-deploy-lab**, from the previous command. 
+====
+
+**Verify the Runtime:**
 
 [source,bash]
 ----
 oc get servingruntime vllm-cuda-runtime -n model-deploy-lab
 ----
+
+== Create an Secret to Access the Models Files
 
 [source,bash]
 .data-connection.yaml
@@ -120,9 +170,6 @@ oc apply -f data-connection.yaml
 # 2. Link it to the Service Account your ISVC is using
 # (Assuming your ISVC uses 'fast-track-sa' based on previous steps)
 oc secret link fast-track-sa models-connection
-
-# 3. Trigger a restart of the pod
-oc delete pod -l serving.kserve.io/inferenceservice=granite3
 
 ----
 
@@ -204,6 +251,9 @@ curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
 
 *Expected Output:*
 
+[source,bash]
+----
+
 {
   "id": "cmpl-...",
   "object": "chat.completion",
@@ -220,3 +270,4 @@ curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
     }
   ]
 }
+----
