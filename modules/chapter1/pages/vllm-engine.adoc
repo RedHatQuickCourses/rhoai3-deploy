@@ -17,10 +17,10 @@ Enter **vLLM**, the standard inference engine for Red Hat OpenShift AI.
 
 == The Core Innovation: PagedAttention
 
-vLLM changed the industry by treating GPU memory the way an Operating System treats RAM: via **Paging**.
+vLLM changed the industry by treating GPU memory the way an operating system treats RAM: via **Paging**.
 
-* **The Old Way:** If a user *might* generate 2,000 tokens, the system reserved a continuous 2,000-token block of VRAM immediately. If they only generated 50 tokens, the rest was wasted.
-* **The vLLM Way (PagedAttention):** It breaks the Key-Value (KV) Cache into small, non-contiguous blocks ("pages"). It allocates these pages on-demand.
+* **The old way:** If a user *might* generate 2,000 tokens, the system reserved a continuous 2,000-token block of VRAM immediately. If they only generated 50 tokens, the rest was wasted.
+* **The vLLM way (PagedAttention):** It breaks the Key-Value (KV) cache into small, non-contiguous blocks ("pages"). It allocates these pages on-demand.
 
 
 
@@ -33,7 +33,7 @@ vLLM changed the industry by treating GPU memory the way an Operating System tre
 == The Interface: OpenAI Compatibility
 
 vLLM provides a drop-in replacement for the OpenAI API.
-This is a strategic advantage for Platform Engineers:
+This is a strategic advantage for platform engineers:
 
 * **No Vendor Lock-in:** Your developers can write code using the standard `openai` Python library.
 * **Migration Path:** You can prototype on public APIs (GPT-4) and switch to your private Granite deployment simply by changing the `base_url` environment variable.

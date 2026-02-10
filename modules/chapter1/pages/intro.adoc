@@ -10,12 +10,12 @@
 *Inference is where the bill arrives.*
 
 In the experimentation phase, the only metric that matters is "intelligence"—how smart is the model?
-But in the production phase, the metrics change. Suddenly, you are judged on **Latency**, **Throughput**, and **Cost Per Token**.
+But in the production phase, the metrics change. Suddenly, you are judged on **latency**, **throughput**, and **cost per token**.
 
 A developer might download a 70-billion parameter model to a laptop and be impressed by its reasoning.
-A Platform Engineer looks at that same model and sees a massive infrastructure bill, potential `OutofMemory` errors, and a latency bottleneck that could kill the user experience.
+A platform engineer looks at that same model and sees a massive infrastructure bill, potential `out-of-memory` errors, and a latency bottleneck that could kill the user experience.
 
-We are moving beyond "Shadow AI"—where users blindly deploy heavy models—to a governed "AI Factory" where inference is fast, efficient, and cost-effective by design.
+We are moving beyond "Shadow AI", where users blindly deploy heavy models—to a governed "industrailized approach to AI" where inference is fast, efficient, and cost-effective by design.
 
 == The Core Challenge: "Will It Fit?"
 
@@ -39,7 +39,7 @@ We will explore tools like the **Red Hat AI Validated Model Catalog**, which act
 .Model Catalog Simulation External Link
 https://redhatquickcourses.github.io/rhoai3-catalog/rhoai3-catalog/3.2/chapter1/section4.html[Catalog Click Through with Arcade, window=blank]
 
- ** **Task:** Explore the Model Catalog layout, default models, and how using these are baselines can validate hardware performance expections and provide default tuning options to accelerate your AI Model inference cost-efficient deployments.
+ ** **Task:** Explore the Model Catalog layout, default models, and how using these are baselines can validate hardware performance expections to accelerate your AI Model inference cost-efficient deployments.
 ====
 
 === 2. Hardware Sizing (The Math)

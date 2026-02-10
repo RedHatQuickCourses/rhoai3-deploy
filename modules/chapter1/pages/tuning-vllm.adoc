@@ -9,7 +9,7 @@
 [.lead]
 *Default settings are for tourists. Engineers tune their engines.*
 
-In section 2, we calculated that a Granite-8B model needs ~19GB of weights and ~20GB of KV Cache (at full 128k context).
+In section 2, we calculated that a Granite-8B model needs ~19GB of weights and ~20GB of KV cache (at full 128k context).
 If you deploy this on an NVIDIA A10G (24GB) using default settings, **it will crash**.
 
 Why? Because vLLM defaults to utilizing 90% of the GPU and attempts to reserve space for the model's *maximum possible context*.
@@ -37,12 +37,12 @@ args:
 This controls how much VRAM vLLM is allowed to consume.
 
  * **Default:** `0.9` (90%).
- * **The Tuning:** On a dedicated Kubernetes node (where no other GPU processes run), you can safely bump this to `0.95`.
- * **The Impact:** That extra 5% (~1.2GB on an A10G) creates room for dozens of additional concurrent user requests in the KV Cache.
+ * **The tuning:** On a dedicated Kubernetes node (where no other GPU processes run), you can safely bump this to `0.95`.
+ * **The impact:** That extra 5% (~1.2GB on an A10G) creates room for dozens of additional concurrent user requests in the KV cache.
 
 == 3. The Scaling Factor: `--tensor-parallel-size`
 
-When the **Static Weights** (from Module 2) exceed the VRAM of a single card, you must shard the model.
+When the **static Wwights** (from Module 2) exceed the VRAM of a single card, you must shard the model.
 
  * **Rule:** The value must match the number of GPUs requested in your Kubernetes pod.
  * **Example:** Deploying Llama-3-70B (~140GB) on 80GB A100s.

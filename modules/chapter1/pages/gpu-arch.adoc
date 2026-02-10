@@ -9,18 +9,18 @@
 [.lead]
 *Don't bring a Ferrari to a grocery run. Don't bring a sedan to a Formula 1 race.*
 
-In traditional IT, you might standardize on one CPU type (e.g., "Generic x86"). In AI, standardizing on one GPU type is a fast track to bankruptcy or performance bottlenecks.
+In traditional IT, you might standardize on one CPU type (e.g., "generic x86"). In AI, standardizing on one GPU type is a fast track to bankruptcy or performance bottlenecks.
 Deploying a small 2B model on an H100 is financial waste. Deploying a 70B model on an A10G is a performance bottleneck.
 
-To build a cost-effective factory, you must understand the "Three Generations" of hardware currently powering the enterprise.
+To build a cost-effective factory, you must understand the "three generations" of hardware currently powering the enterprise.
 
-== 1. The Workhorse: Ampere (A100, A10G)
-* **Era:** The "Standard" (2020-2022).
-* **The Card:** **NVIDIA A10G** (24GB).
-* **Best For:** Most inference workloads (7B - 13B models).
-* **The Reality:**
+== 1. The workhorse: Ampere (A100, A10G)
+* **Era:** The "standard" (2020-2022).
+* **The card:** **NVIDIA A10G** (24GB).
+* **Best for:** Most inference workloads (7B - 13B models).
+* **The reality:**
 ** This is likely what your cloud provider or on-prem cluster has the most of.
-** It excels at **FP16** (Half Precision) math.
+** It excels at **FP16** (half precision) math.
 ** **Limitation:** It lacks native hardware acceleration for FP8 (8-bit floating point). If you quantize to 8-bit, you are saving memory, but you aren't gaining the massive compute speedup seen in newer cards.
 
 [NOTE]
@@ -31,10 +31,10 @@ The **Ada Lovelace** generation (L4, L40S) acts as a bridge. It is newer than Am
 * **Era:** The "Transformer Native" (2023+).
 * **The Card:** **NVIDIA H100** (80GB).
 * **Best For:** Large models (70B+) and high-throughput batching.
-* **The Killer Feature:** **The Transformer Engine**.
+* **The killer feature:** **The Transformer Engine**.
 ** The H100 can natively process **FP8** data.
 ** This means it processes math twice as fast as FP16, while using half the memory bandwidth.
-* **The Strategy:** If you have H100s, you *must* use FP8 quantization. Running standard FP16 models on an H100 leaves 50% of the performance on the table.
+* **The strategy:** If you have H100s, you *must* use FP8 quantization. Running standard FP16 models on an H100 leaves 50% of the performance on the table.
 
 == 3. The Future: Blackwell (B100/B200)
 * **Era:** The "Trillion Parameter" Scale.

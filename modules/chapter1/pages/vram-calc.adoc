@@ -11,7 +11,7 @@
 
 A common mistake is looking at a model's file size (e.g., "15GB") and assuming it will fit on a 16GB GPU.
 It won't.
-To size an inference node correctly, you must account for the **Model Weights** (static) and the **KV Cache** (dynamic).
+To size an inference node correctly, you must account for the **model weights** (static) and the **KV cache** (dynamic).
 
 == The Formula
 
@@ -23,8 +23,8 @@ To size an inference node correctly, you must account for the **Model Weights** 
 This is the "rent" you pay just to turn the model on.
 
 * **Formula:** `Params (Billions) * Size_Per_Param`
-* **Size Guide:**
-** **FP16 (Standard):** 2 Bytes per param.
+* **Size guide:**
+** **FP16 (standard):** 2 Bytes per param.
 ** **FP8 / INT8:** 1 Byte per param.
 ** **AWQ (INT4):** 0.5 Bytes per param.
 
@@ -64,11 +64,11 @@ You cannot magically download more VRAM. You must compromise.
 By limiting the context window, you reserve room for the model to breathe.
 
 * **The Parameter:** `--max-model-len`
-* **The Math:** Reducing context from 128k to **8k** drops the KV Cache requirement from ~20GB to **~1.5GB**.
+* **The Math:** Reducing context from 128k to **8k** drops the KV cache requirement from ~20GB to **~1.5GB**.
 
 .Optimized Deployment
 [source,text]
-Static (19.2 GB) + Limited Cache (1.5 GB) = 20.7 GB
+Static (19.2 GB) + limited cache (1.5 GB) = 20.7 GB
 ---
 Fits safely on 24GB Card.
 
