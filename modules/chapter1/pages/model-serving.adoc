@@ -133,6 +133,10 @@ oc get servingruntime vllm-cuda-runtime -n model-deploy-lab
 
 == Create an Secret to Access the Models Files
 
+In order to read the model files from the "vault" storage, we need a storage-config, which is stored as a kubernets secret.
+There is supplied file in the deploy folder called dataconn.yaml.  Apply this file to create the secret.
+
+
 [source,bash]
 .data-connection.yaml
 ----
@@ -162,13 +166,13 @@ stringData:
 ----
 
 [source,bash]
-.link the accounts.yaml
+.deploy and link the accounts.yaml
 ----
 # 1. Apply the corrected secret
-oc apply -f data-connection.yaml
+oc apply -f ./deploy/dataconn.yaml
 
-# 2. Link it to the Service Account your ISVC is using
-# (Assuming your ISVC uses 'fast-track-sa' based on previous steps)
+# 2. Link it to the Service Account your inference service is using
+# (Assuming your inference service uses 'fast-track-sa' based on previous steps)
 oc secret link fast-track-sa models-connection
 
 ----
@@ -214,7 +218,7 @@ spec:
 
 [source,bash]
 ----
-oc apply -f granite3-isvc.yaml
+oc apply -f ./deploy/deploy.yaml
 ----
 
 === **Wait for Readiness:**
@@ -271,3 +275,8 @@ curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
   ]
 }
 ----
+
+This is one example of model inference using the built in runtime from the command line. 
+
+Based on your feedback, we'll update this course accordingly: What type of model inference examples should be add to this course?
+
