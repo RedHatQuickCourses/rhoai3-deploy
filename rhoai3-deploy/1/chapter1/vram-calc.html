@@ -112,7 +112,7 @@
 <div class="paragraph">
 <p>A common mistake is looking at a model&#8217;s file size (e.g., "15GB") and assuming it will fit on a 16GB GPU.
 It won&#8217;t.
-To size an inference node correctly, you must account for the <strong>Model Weights</strong> (static) and the <strong>KV Cache</strong> (dynamic).</p>
+To size an inference node correctly, you must account for the <strong>model weights</strong> (static) and the <strong>KV cache</strong> (dynamic).</p>
 </div>
 </div>
 </div>
@@ -134,11 +134,11 @@ To size an inference node correctly, you must account for the <strong>Model Weig
 <p><strong>Formula:</strong> <code>Params (Billions) * Size_Per_Param</code></p>
 </li>
 <li>
-<p><strong>Size Guide:</strong></p>
+<p><strong>Size guide:</strong></p>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>FP16 (Standard):</strong> 2 Bytes per param.</p>
+<p><strong>FP16 (standard):</strong> 2 Bytes per param.</p>
 </li>
 <li>
 <p><strong>FP8 / INT8:</strong> 1 Byte per param.</p>
@@ -218,14 +218,14 @@ By limiting the context window, you reserve room for the model to breathe.</p>
 <p><strong>The Parameter:</strong> <code>--max-model-len</code></p>
 </li>
 <li>
-<p><strong>The Math:</strong> Reducing context from 128k to <strong>8k</strong> drops the KV Cache requirement from ~20GB to <strong>~1.5GB</strong>.</p>
+<p><strong>The Math:</strong> Reducing context from 128k to <strong>8k</strong> drops the KV cache requirement from ~20GB to <strong>~1.5GB</strong>.</p>
 </li>
 </ul>
 </div>
 <div class="listingblock">
 <div class="title">Optimized Deployment</div>
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-text hljs" data-lang="text">Static (19.2 GB) + Limited Cache (1.5 GB) = 20.7 GB
+<pre class="highlightjs highlight"><code class="language-text hljs" data-lang="text">Static (19.2 GB) + limited cache (1.5 GB) = 20.7 GB
 ---
 Fits safely on 24GB Card.</code></pre>
 </div>

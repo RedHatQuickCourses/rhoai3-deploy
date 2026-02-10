@@ -110,37 +110,37 @@
 <p><strong>Don&#8217;t bring a Ferrari to a grocery run. Don&#8217;t bring a sedan to a Formula 1 race.</strong></p>
 </div>
 <div class="paragraph">
-<p>In traditional IT, you might standardize on one CPU type (e.g., "Generic x86"). In AI, standardizing on one GPU type is a fast track to bankruptcy or performance bottlenecks.
+<p>In traditional IT, you might standardize on one CPU type (e.g., "generic x86"). In AI, standardizing on one GPU type is a fast track to bankruptcy or performance bottlenecks.
 Deploying a small 2B model on an H100 is financial waste. Deploying a 70B model on an A10G is a performance bottleneck.</p>
 </div>
 <div class="paragraph">
-<p>To build a cost-effective factory, you must understand the "Three Generations" of hardware currently powering the enterprise.</p>
+<p>To build a cost-effective factory, you must understand the "three generations" of hardware currently powering the enterprise.</p>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_1_the_workhorse_ampere_a100_a10g"><a class="anchor" href="#_1_the_workhorse_ampere_a100_a10g"></a>1. The Workhorse: Ampere (A100, A10G)</h2>
+<h2 id="_1_the_workhorse_ampere_a100_a10g"><a class="anchor" href="#_1_the_workhorse_ampere_a100_a10g"></a>1. The workhorse: Ampere (A100, A10G)</h2>
 <div class="sectionbody">
 <div class="ulist">
 <ul>
 <li>
-<p><strong>Era:</strong> The "Standard" (2020-2022).</p>
+<p><strong>Era:</strong> The "standard" (2020-2022).</p>
 </li>
 <li>
-<p><strong>The Card:</strong> <strong>NVIDIA A10G</strong> (24GB).</p>
+<p><strong>The card:</strong> <strong>NVIDIA A10G</strong> (24GB).</p>
 </li>
 <li>
-<p><strong>Best For:</strong> Most inference workloads (7B - 13B models).</p>
+<p><strong>Best for:</strong> Most inference workloads (7B - 13B models).</p>
 </li>
 <li>
-<p><strong>The Reality:</strong></p>
+<p><strong>The reality:</strong></p>
 <div class="ulist">
 <ul>
 <li>
 <p>This is likely what your cloud provider or on-prem cluster has the most of.</p>
 </li>
 <li>
-<p>It excels at <strong>FP16</strong> (Half Precision) math.</p>
+<p>It excels at <strong>FP16</strong> (half precision) math.</p>
 </li>
 <li>
 <p><strong>Limitation:</strong> It lacks native hardware acceleration for FP8 (8-bit floating point). If you quantize to 8-bit, you are saving memory, but you aren&#8217;t gaining the massive compute speedup seen in newer cards.</p>
@@ -180,7 +180,7 @@ The <strong>Ada Lovelace</strong> generation (L4, L40S) acts as a bridge. It is 
 <p><strong>Best For:</strong> Large models (70B+) and high-throughput batching.</p>
 </li>
 <li>
-<p><strong>The Killer Feature:</strong> <strong>The Transformer Engine</strong>.</p>
+<p><strong>The killer feature:</strong> <strong>The Transformer Engine</strong>.</p>
 <div class="ulist">
 <ul>
 <li>
@@ -193,7 +193,7 @@ The <strong>Ada Lovelace</strong> generation (L4, L40S) acts as a bridge. It is 
 </div>
 </li>
 <li>
-<p><strong>The Strategy:</strong> If you have H100s, you <strong>must</strong> use FP8 quantization. Running standard FP16 models on an H100 leaves 50% of the performance on the table.</p>
+<p><strong>The strategy:</strong> If you have H100s, you <strong>must</strong> use FP8 quantization. Running standard FP16 models on an H100 leaves 50% of the performance on the table.</p>
 </li>
 </ul>
 </div>

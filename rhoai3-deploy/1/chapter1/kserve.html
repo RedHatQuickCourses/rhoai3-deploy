@@ -107,7 +107,7 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This guide documents the architectural progression of serving Large Language Models (LLMs) using KServe. It covers the transition from basic serverless concepts to the "RawDeployment" patterns preferred by OpenShift AI (RHOAI) for production workloads.</p>
+<p>This guide documents the architectural progression of serving large language models (LLMs) using KServe. It covers the transition from basic serverless concepts to the "RawDeployment" patterns preferred by OpenShift AI (RHOAI) for production workloads.</p>
 </div>
 </div>
 </div>
@@ -118,7 +118,7 @@
 <p>KServe acts as a Kubernetes-native tool designed to solve the "last mile" problem in machine learning: serving models in production.</p>
 </div>
 <div class="paragraph">
-<p>Think of KServe as a "universal adapter" for your models. Instead of writing custom web servers (like Flask or FastAPI) for every different framework you use, KServe provides a standardized Custom Resource Definition (CRD) called the <code>InferenceService</code>.</p>
+<p>Think of KServe as a "universal adapter" for your models. Instead of writing custom web servers (like Flask or FastAPI) for every different framework you use, KServe provides a standardized 'custom resource definition' (CRD) called the <code>InferenceService</code>.</p>
 </div>
 <div class="paragraph">
 <p>Its core value proposition handles the infrastructure heavy lifting so engineers can focus on the model:</p>
@@ -129,7 +129,7 @@
 <p><strong>Abstracted Runtimes:</strong> You provide a model URI (e.g., S3), and KServe automatically spins up the correct container (Triton, TorchServe, vLLM).</p>
 </li>
 <li>
-<p><strong>Standardized Protocol:</strong> It uses the V2 Inference Protocol, meaning client code remains consistent even if the backend framework changes.</p>
+<p><strong>Standardized Protocol:</strong> It uses the V2 inference protocol, meaning client code remains consistent even if the backend framework changes.</p>
 </li>
 <li>
 <p><strong>Serverless Capabilities:</strong> Historically, KServe is known for scaling replicas based on traffic, including "scaling to zero" to save costs.</p>
@@ -319,10 +319,10 @@ spec:
 <div class="ulist">
 <ul>
 <li>
-<p><strong>The Fuel Gauge (<code>vllm:gpu_cache_usage_perc</code>)</strong>: Measures KV Cache fullness. If this hits &gt;95%, vLLM will pause requests to swap memory.</p>
+<p><strong>The fuel gauge (<code>vllm:gpu_cache_usage_perc</code>)</strong>: Measures KV Cache fullness. If this hits &gt;95%, vLLM will pause requests to swap memory.</p>
 </li>
 <li>
-<p><strong>The Speedometer (<code>vllm:time_per_output_token_seconds</code>)</strong>: Measures user-perceived latency. Target &lt;50ms per token for an "instant" feel.</p>
+<p><strong>The speedometer (<code>vllm:time_per_output_token_seconds</code>)</strong>: Measures user-perceived latency. Target &lt;50ms per token for an "instant" feel.</p>
 </li>
 <li>
 <p><strong>The Traffic (<code>vllm:num_requests_waiting</code>)</strong>: If this is &gt;0, users are stuck in the queue, and your Autoscaler should have already kicked in.</p>

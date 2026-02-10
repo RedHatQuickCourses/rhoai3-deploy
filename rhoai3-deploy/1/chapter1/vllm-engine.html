@@ -123,15 +123,15 @@ This resulted in massive fragmentation. A 24GB GPU would report "Out of Memory" 
 <h2 id="_the_core_innovation_pagedattention"><a class="anchor" href="#_the_core_innovation_pagedattention"></a>The Core Innovation: PagedAttention</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>vLLM changed the industry by treating GPU memory the way an Operating System treats RAM: via <strong>Paging</strong>.</p>
+<p>vLLM changed the industry by treating GPU memory the way an operating system treats RAM: via <strong>Paging</strong>.</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p><strong>The Old Way:</strong> If a user <strong>might</strong> generate 2,000 tokens, the system reserved a continuous 2,000-token block of VRAM immediately. If they only generated 50 tokens, the rest was wasted.</p>
+<p><strong>The old way:</strong> If a user <strong>might</strong> generate 2,000 tokens, the system reserved a continuous 2,000-token block of VRAM immediately. If they only generated 50 tokens, the rest was wasted.</p>
 </li>
 <li>
-<p><strong>The vLLM Way (PagedAttention):</strong> It breaks the Key-Value (KV) Cache into small, non-contiguous blocks ("pages"). It allocates these pages on-demand.</p>
+<p><strong>The vLLM way (PagedAttention):</strong> It breaks the Key-Value (KV) cache into small, non-contiguous blocks ("pages"). It allocates these pages on-demand.</p>
 </li>
 </ul>
 </div>
@@ -158,7 +158,7 @@ This resulted in massive fragmentation. A 24GB GPU would report "Out of Memory" 
 <div class="sectionbody">
 <div class="paragraph">
 <p>vLLM provides a drop-in replacement for the OpenAI API.
-This is a strategic advantage for Platform Engineers:</p>
+This is a strategic advantage for platform engineers:</p>
 </div>
 <div class="ulist">
 <ul>

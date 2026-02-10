@@ -110,7 +110,7 @@
 <p><strong>Default settings are for tourists. Engineers tune their engines.</strong></p>
 </div>
 <div class="paragraph">
-<p>In section 2, we calculated that a Granite-8B model needs ~19GB of weights and ~20GB of KV Cache (at full 128k context).
+<p>In section 2, we calculated that a Granite-8B model needs ~19GB of weights and ~20GB of KV cache (at full 128k context).
 If you deploy this on an NVIDIA A10G (24GB) using default settings, <strong>it will crash</strong>.</p>
 </div>
 <div class="paragraph">
@@ -166,10 +166,10 @@ If you deploy this on an NVIDIA A10G (24GB) using default settings, <strong>it w
 <p><strong>Default:</strong> <code>0.9</code> (90%).</p>
 </li>
 <li>
-<p><strong>The Tuning:</strong> On a dedicated Kubernetes node (where no other GPU processes run), you can safely bump this to <code>0.95</code>.</p>
+<p><strong>The tuning:</strong> On a dedicated Kubernetes node (where no other GPU processes run), you can safely bump this to <code>0.95</code>.</p>
 </li>
 <li>
-<p><strong>The Impact:</strong> That extra 5% (~1.2GB on an A10G) creates room for dozens of additional concurrent user requests in the KV Cache.</p>
+<p><strong>The impact:</strong> That extra 5% (~1.2GB on an A10G) creates room for dozens of additional concurrent user requests in the KV cache.</p>
 </li>
 </ul>
 </div>
@@ -179,7 +179,7 @@ If you deploy this on an NVIDIA A10G (24GB) using default settings, <strong>it w
 <h2 id="_3_the_scaling_factor_tensor_parallel_size"><a class="anchor" href="#_3_the_scaling_factor_tensor_parallel_size"></a>3. The Scaling Factor: <code>--tensor-parallel-size</code></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>When the <strong>Static Weights</strong> (from Module 2) exceed the VRAM of a single card, you must shard the model.</p>
+<p>When the <strong>static Wwights</strong> (from Module 2) exceed the VRAM of a single card, you must shard the model.</p>
 </div>
 <div class="ulist">
 <ul>
