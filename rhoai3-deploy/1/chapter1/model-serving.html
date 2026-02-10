@@ -172,6 +172,7 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <li><a href="#_step_2_the_runtime_the_engine">Step 2: The Runtime (The Engine)</a></li>
 <li><a href="#_step_3_the_deployment_the_workload">Step 3: The Deployment (The Workload)</a></li>
 <li><a href="#_step_4_validate_the_api">Step 4: Validate the API</a></li>
+<li><a href="#_add_the_port_explicitly">Add the port explicitly</a></li>
 </ul>
 </div>
 </div>
@@ -236,6 +237,47 @@ oc apply -f - -n model-deploy-lab</code></pre>
 </li>
 </ol>
 </div>
+<div class="listingblock">
+<div class="title">data-connection.yaml</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">apiVersion: v1
+kind: Secret
+metadata:
+  name: models-connection  # Renaming for clarity (was 'models' or 'storage-config')
+  namespace: model-deploy-lab
+  labels:
+    # 1. VISIBILITY: Tells the Dashboard "I belong to RHOAI"
+    opendatahub.io/dashboard: "true"
+    # 2. MANAGEMENT: Tells RHOAI "I am a managed Data Connection"
+    opendatahub.io/managed: "true"
+  annotations:
+    # 3. TYPE: Tells the Injector "I am an S3 credential"
+    opendatahub.io/connection-type: s3
+    openshift.io/display-name: Models Bucket
+type: Opaque
+stringData:
+  # The keys MUST match standard AWS SDK expectations
+  AWS_ACCESS_KEY_ID: minio
+  AWS_SECRET_ACCESS_KEY: minio123
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_S3_ENDPOINT: http://minio-service.model-deploy-lab:9000
+  AWS_S3_BUCKET: models</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">link the accounts.yaml</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># 1. Apply the corrected secret
+oc apply -f data-connection.yaml
+
+# 2. Link it to the Service Account your ISVC is using
+# (Assuming your ISVC uses 'fast-track-sa' based on previous steps)
+oc secret link fast-track-sa models-connection
+
+# 3. Trigger a restart of the pod
+oc delete pod -l serving.kserve.io/inferenceservice=granite3</code></pre>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -263,6 +305,7 @@ metadata:
     serving.kserve.io/deploymentMode: RawDeployment
 spec:
   predictor:
+    serviceAccountName: fast-track-sa
     model:
       # The Format must match what the Runtime supports (vLLM)
       modelFormat:
@@ -321,35 +364,28 @@ echo "Targeting: $MODEL_URL"</code></pre>
 </div>
 </div>
 </li>
-<li>
-<p><strong>Send a Chat Completion Request:</strong></p>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -k -X POST "$MODEL_URL/v1/chat/completions" \
+</ol>
+</div>
+</div>
+</div>
+<h1 id="_add_the_port_explicitly" class="sect0"><a class="anchor" href="#_add_the_port_explicitly"></a>Add the port explicitly</h1>
+<div class="paragraph">
+<p>curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "granite3",
-    "messages": [
-      {
-        "role": "user",
-        "content": "Write a haiku about deploying AI on Kubernetes."
-      }
-    ],
-    "temperature": 0.7,
-    "max_tokens": 50
-  }'</code></pre>
-</div>
-</div>
-</li>
-</ol>
-</div>
-<div class="paragraph">
-<p><strong>Expected Output:</strong></p>
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
-  "id": "cmpl-...",
+<pre>*Expected Output:*
+[source,json]</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>{
+  "id": "cmpl-&#8230;&#8203;",
   "object": "chat.completion",
   "created": 1700000000,
   "model": "granite3",
@@ -363,12 +399,11 @@ echo "Targeting: $MODEL_URL"</code></pre>
       "finish_reason": "stop"
     }
   ]
-}</code></pre>
+}</p>
 </div>
-</div>
-<div class="paragraph">
-<p><a href="#course-summary.adoc" class="xref unresolved">Next: Course Summary</a></p>
-</div>
+<div class="listingblock">
+<div class="content">
+<pre></pre>
 </div>
 </div>
 <nav class="pagination">
