@@ -1,0 +1,24 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite3
+  namespace: model-deploy-lab
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    # vvvvv ADD THIS LINE vvvvv
+    serviceAccountName: fast-track-sa
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-cuda-runtime
+      storageUri: s3://models/granite3
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+          memory: "8Gi"
+        limits:
+          nvidia.com/gpu: "1"
+          memory: "10Gi"

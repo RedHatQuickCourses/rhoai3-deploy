@@ -39,7 +39,6 @@ You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-past
 
 In this lab, we will deploy our inference stack using **Infrastructure-as-Code**.
 
-toc::[]
 
 == Step 1: Prerequisites
 
@@ -51,9 +50,9 @@ Before proceeding, verify that your "Fast Track" script successfully populated t
 ----
 # Verify the model files exist in the 'models' bucket
 oc exec -n model-deploy-lab deployment/minio -- ls /data/models/granite3
-----
 +
 *Expected Output:* You should see files like `config.json`, `tokenizer.json`, and `*.safetensors`.
+----
 
 . **Check the Data Connection:**
 +
