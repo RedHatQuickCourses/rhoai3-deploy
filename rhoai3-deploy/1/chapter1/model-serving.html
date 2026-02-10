@@ -304,6 +304,10 @@ oc apply -f - -n model-deploy-lab</code></pre>
 <div class="sect1">
 <h2 id="_create_an_secret_to_access_the_models_files"><a class="anchor" href="#_create_an_secret_to_access_the_models_files"></a>Create an Secret to Access the Models Files</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>In order to read the model files from the "vault" storage, we need a storage-config, which is stored as a kubernets secret.
+There is supplied file in the deploy folder called dataconn.yaml.  Apply this file to create the secret.</p>
+</div>
 <div class="listingblock">
 <div class="title">data-connection.yaml</div>
 <div class="content">
@@ -332,13 +336,13 @@ stringData:
 </div>
 </div>
 <div class="listingblock">
-<div class="title">link the accounts.yaml</div>
+<div class="title">deploy and link the accounts.yaml</div>
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># 1. Apply the corrected secret
-oc apply -f data-connection.yaml
+oc apply -f ./deploy/dataconn.yaml
 
-# 2. Link it to the Service Account your ISVC is using
-# (Assuming your ISVC uses 'fast-track-sa' based on previous steps)
+# 2. Link it to the Service Account your inference service is using
+# (Assuming your inference service uses 'fast-track-sa' based on previous steps)
 oc secret link fast-track-sa models-connection</code></pre>
 </div>
 </div>
@@ -390,7 +394,7 @@ spec:
 <h3 id="_apply_the_deployment"><a class="anchor" href="#_apply_the_deployment"></a><strong>Apply the Deployment:</strong></h3>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f granite3-isvc.yaml</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f ./deploy/deploy.yaml</code></pre>
 </div>
 </div>
 </div>
@@ -453,6 +457,12 @@ echo "Targeting: $MODEL_URL"</code></pre>
   ]
 }</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>This is one example of model inference using the built in runtime from the command line.</p>
+</div>
+<div class="paragraph">
+<p>Based on your feedback, we&#8217;ll update this course accordingly: What type of model inference examples should be add to this course?</p>
 </div>
 </div>
 </div>
