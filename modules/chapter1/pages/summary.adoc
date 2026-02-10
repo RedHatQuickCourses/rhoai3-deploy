@@ -22,22 +22,27 @@ You have now built a governed **AI Serving Engine**. Let's review the engineerin
 
 | **1. Strategy**
 | Instead of grabbing random models, you selected **granite-3.3-2b-instruct** from the **Red Hat AI Validated Repository**.
+
 *Result:* You gained legal certainty (Apache 2.0) and performance predictability.
 
 | **2. Architecture**
 | Instead of guessing, you matched the hardware to the workload.
+
 *Result:* You avoided deploying an FP16 model on incompatible hardware or over-provisioning an H100 for a tiny task.
 
 | **3. Sizing**
 | You performed the VRAM math: `(Weights * 1.2) + KV Cache`.
+
 *Result:* You identified that the default 128k context window would crash your A10G GPU.
 
 | **4. Tuning**
 | You configured **vLLM** with `--max-model-len=16000`.
-*Result:* You created a "Safety Valve" that prevents OOM errors under high load.
+
+*Result:* You reduced requirement to prevent OOM errors under high load.
 
 | **5. Operations**
 | You abandoned the UI for a GitOps script (`deploy-model-yaml`) from the `rhoai3-deploy` repository.
+
 *Result:* Your deployment is now reproducible, version-controlled, and ready for automation.
 |===
 
@@ -45,12 +50,12 @@ You have now built a governed **AI Serving Engine**. Let's review the engineerin
 
 Serving the model is just Day 1. To run a true production platform, your next steps are:
 
- * **1. Observability:**
+**1. Observability:**
 Configure **Prometheus** to scrape the vLLM metrics port (`8080`).
 
  * *Key Metric:* `vllm:num_requests_running` (Concurrency) and `vllm:gpu_cache_usage_perc` (Are we running out of KV Cache?).
 
-* **2. Quantization:**
+**2. Quantization:**
 Explore the **Quantization Labs** (coming soon) to shrink your Granite-3.3 model to **INT8**.
 
  * *Goal:* Double your throughput on the same hardware.

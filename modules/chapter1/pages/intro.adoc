@@ -1,4 +1,4 @@
-= Enterprise Model Serving at Scale
+= Shadow-Proof AI: The Economics of Governed Serving
 :navtitle: Strategy & Selection
 :toc: macro
 
