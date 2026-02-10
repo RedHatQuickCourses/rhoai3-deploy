@@ -51,7 +51,7 @@ Configure **Prometheus** to scrape the vLLM metrics port (`8080`).
  * *Key Metric:* `vllm:num_requests_running` (Concurrency) and `vllm:gpu_cache_usage_perc` (Are we running out of KV Cache?).
 
 * **2. Quantization:**
-Explore the **Quantization Labs** (coming soon) to shrink your Granite-4 model to **INT8**.
+Explore the **Quantization Labs** (coming soon) to shrink your Granite-3.3 model to **INT8**.
 
  * *Goal:* Double your throughput on the same hardware.
 

@@ -9,14 +9,16 @@
 [.lead]
 *Click-Ops does not scale. GitOps does.*
 
-In the previous modules, we selected the **granite-3.3-2b-instruct** model and calculated the tuning parameters (`max-model-len=16000`) required to make it run safely on our hardware.
-Now, we must deploy it.
+In the previous modules, we selected the *Granite-8B (FP16)* model and calculated the tuning parameters (`max-model-len=8000`) required to make it run safely on our hardware.
+
+Now, we're using the **granite-3.3-2b-instruct**, it's .75% smaller and faster experience. 
+
 
 You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo.
 
 But what happens when you need to deploy 50 models? Or when you need to update the configuration across three clusters?
 
-In this lab, We will deploy our tuned inference stack using a parameterized **Infrastructure-as-Code** script.
+In this lab, We will deploy our tuned inference stack using a parameterized **Infrastructure-as-Code** scripts.
 
 
 == Fast Track to Model Deployment Setup
@@ -76,12 +78,6 @@ Once the script completes (look for `✅ SUCCESS`), verify the environment is re
 
 == Model Inference 
 
-Now, we must deploy the **Granite 3.3 2B** model using a reproducible KServe manifest.
-
-You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo. But this approach fails when you need to deploy 50 models or update configurations across multiple clusters.
-
-In this lab, we will deploy our inference stack using **Infrastructure-as-Code**.
-
 
 === Step 1: Prerequisites
 
@@ -131,14 +127,14 @@ To view the runtime config, leave off the:
 oc get servingruntime vllm-cuda-runtime -n model-deploy-lab
 ----
 
-== Create an Secret to Access the Models Files
+== Create a Secret to Access the Models Files
 
 In order to read the model files from the "vault" storage, we need a storage-config, which is stored as a kubernets secret.
 There is supplied file in the deploy folder called dataconn.yaml.  Apply this file to create the secret.
 
 
 [source,bash]
-.data-connection.yaml
+.dataconn.yaml
 ----
 apiVersion: v1
 kind: Secret
@@ -166,15 +162,15 @@ stringData:
 ----
 
 [source,bash]
-.deploy and link the accounts.yaml
+.deploy the storage secret for use by the deployment
 ----
-# 1. Apply the corrected secret
 oc apply -f ./deploy/dataconn.yaml
+----
 
-# 2. Link it to the Service Account your inference service is using
-# (Assuming your inference service uses 'fast-track-sa' based on previous steps)
+[source,bash]
+.links data-connection to fast-track service account
+----
 oc secret link fast-track-sa models-connection
-
 ----
 
 == Step 3: The Deployment (The Workload)
@@ -280,7 +276,17 @@ curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
 }
 ----
 
-This is one example of model inference using the built in runtime from the command line. 
+---
 
-Based on your feedback, we'll update this course accordingly: What type of model inference examples should be add to this course?
+=== That's a Wrap
+
+This is one example of model inference using the built-in runtime from the command line. 
+
+Based on your feedback, we'll update this course accordingly: 
+
+What type of model inference examples should be add to this course?
+What additional features need to be supported such as tool calling templates?
+
+
+let use by https://github.com/RedHatQuickCourses/rhoai3-deploy/issues[creating an issue in the course repository, window=blank] 
 
