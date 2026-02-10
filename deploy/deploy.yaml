@@ -4,27 +4,50 @@ metadata:
   name: granite3
   namespace: model-deploy-lab
   annotations:
-    # "RawDeployment" mode bypasses Serverless to prevent cold starts
+    # 1. Operational Mode
     serving.kserve.io/deploymentMode: RawDeployment
+    security.opendatahub.io/enable-auth: 'false' # Keep false for lab simplicity
+    
+    # 2. Display & Metrics
+    openshift.io/display-name: Granite 3.3 2B Instruct
+    prometheus.io/path: /metrics
+    prometheus.io/port: '8080'
+    
+  labels:
+    # 3. Discovery (Dashboard & Gen AI Studio)
+    opendatahub.io/dashboard: 'true'
+    opendatahub.io/genai-asset: 'true'
+    app: granite3
+    component: predictor
 spec:
   predictor:
+    # 4. Identity (Links to your 'storage-config' secret)
     serviceAccountName: fast-track-sa
     model:
-      # The Format must match what the Runtime supports (vLLM)
       modelFormat:
         name: vLLM
-      # This name must match the runtime extracted in Step 2
       runtime: vllm-cuda-runtime
-      # The path to your model in MinIO (s3://bucket/folder)
+      
+      # 5. Storage (Back to S3 as requested)
       storageUri: s3://models/granite3
-      args:
-        - "--max-model-len=4096"        # Limits context to 4k to save VRAM
-        - "--gpu-memory-utilization=0.95" # Uses 95% of GPU (leaves 5% for overhead)
-      #  - "--distributed-executor-backend=mp" # Required for some multi-GPU setups
+      
+      # 6. Resources (Tuned for Granite 3 2B)
       resources:
         requests:
           nvidia.com/gpu: "1"
           memory: "8Gi"
+          cpu: "1"
         limits:
           nvidia.com/gpu: "1"
           memory: "10Gi"
+          cpu: "4"
+
+      # 7. Engine Arguments (Granite-Specific)
+      args:
+        - "--port=8080"
+        - "--model=/mnt/models"
+        - "--served-model-name=granite3"
+        - "--dtype=half"
+        - "--max-model-len=4096"        # 4k context is safe for 2B model
+        - "--gpu-memory-utilization=0.95"
+        # Chat template is auto-detected for Granite, usually no need to override
