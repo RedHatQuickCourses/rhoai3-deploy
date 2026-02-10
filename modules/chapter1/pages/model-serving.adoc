@@ -284,9 +284,10 @@ This is one example of model inference using the built-in runtime from the comma
 
 Based on your feedback, we'll update this course accordingly: 
 
-What type of model inference examples should be add to this course?
-What additional features need to be supported such as tool calling templates?
+ * What type of model inference examples should be add to this course?
+
+ * What additional features need to be supported such as tool calling templates?
 
 
-let use by https://github.com/RedHatQuickCourses/rhoai3-deploy/issues[creating an issue in the course repository, window=blank] 
+Let us know by https://github.com/RedHatQuickCourses/rhoai3-deploy/issues[creating an issue in the course repository, window=blank] 
 
