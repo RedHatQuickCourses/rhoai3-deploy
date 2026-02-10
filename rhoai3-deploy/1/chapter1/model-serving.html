@@ -125,15 +125,15 @@
 </div>
 </div>
 </li>
-<li>
+</ol>
+</div>
+<div class="paragraph">
 <p><strong>Switch to the lab directory:</strong></p>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cd rhoai3-deploy</code></pre>
 </div>
-</div>
-</li>
-</ol>
 </div>
 <div class="admonitionblock important">
 <table>
@@ -173,29 +173,26 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <div class="paragraph">
 <p>Before proceeding, verify that your "Fast Track" script successfully populated the vault.</p>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Check the S3 Bucket:</strong></p>
+<div class="sect2">
+<h3 id="_check_the_s3_bucket"><a class="anchor" href="#_check_the_s3_bucket"></a><strong>Check the S3 Bucket:</strong></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify the model files exist in the 'models' bucket
-oc exec -n model-deploy-lab deployment/minio -- ls /data/models/granite3
-+
-*Expected Output:* You should see files like `config.json`, `tokenizer.json`, and `*.safetensors`.</code></pre>
+oc exec -n model-deploy-lab deployment/minio -- ls /data/models/granite3</code></pre>
 </div>
 </div>
-</li>
-<li>
-<p><strong>Check the Data Connection:</strong></p>
+<div class="paragraph">
+<p><strong>Expected Output:</strong> You should see files like <code>config.json</code>, <code>tokenizer.json</code>, and <code>*.safetensors</code>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_check_the_data_connection"><a class="anchor" href="#_check_the_data_connection"></a><strong>Check the Data Connection:</strong></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify the KServe storage secret exists
 oc get secret storage-config -n model-deploy-lab</code></pre>
 </div>
 </div>
-</li>
-</ol>
 </div>
 </div>
 </div>
@@ -205,26 +202,21 @@ oc get secret storage-config -n model-deploy-lab</code></pre>
 <div class="paragraph">
 <p>RHOAI includes a certified vLLM runtime template. Instead of writing one from scratch, we will extract the official template from the cluster and install it in our namespace.</p>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Extract and Apply the Runtime:</strong></p>
+<div class="sect2">
+<h3 id="_extract_and_apply_the_runtime"><a class="anchor" href="#_extract_and_apply_the_runtime"></a><strong>Extract and Apply the Runtime:</strong></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc process vllm-cuda-runtime-template -n redhat-ods-applications | \
 oc apply -f - -n model-deploy-lab</code></pre>
 </div>
 </div>
-</li>
-<li>
-<p><strong>Verify the Runtime:</strong></p>
+</div>
+<div class="sect2">
+<h3 id="_verify_the_runtime"><a class="anchor" href="#_verify_the_runtime"></a><strong>Verify the Runtime:</strong></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get servingruntime vllm-cuda-runtime -n model-deploy-lab</code></pre>
 </div>
-</div>
-</li>
-</ol>
 </div>
 <div class="listingblock">
 <div class="title">data-connection.yaml</div>
@@ -269,16 +261,15 @@ oc delete pod -l serving.kserve.io/inferenceservice=granite3</code></pre>
 </div>
 </div>
 </div>
+</div>
 <div class="sect1">
 <h2 id="_step_3_the_deployment_the_workload"><a class="anchor" href="#_step_3_the_deployment_the_workload"></a>Step 3: The Deployment (The Workload)</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>We will now create the <code>InferenceService</code>. This Custom Resource binds our <strong>Runtime</strong> (the engine) to our <strong>Storage</strong> (the fuel).</p>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Create the Manifest:</strong></p>
+<div class="sect2">
+<h3 id="_create_the_manifest"><a class="anchor" href="#_create_the_manifest"></a><strong>Create the Manifest:</strong></h3>
 <div class="paragraph">
 <p>Copy the following YAML to a file named <code>granite3-isvc.yaml</code>.</p>
 </div>
@@ -312,17 +303,17 @@ spec:
           memory: "10Gi"</code></pre>
 </div>
 </div>
-</li>
-<li>
-<p><strong>Apply the Deployment:</strong></p>
+</div>
+<div class="sect2">
+<h3 id="_apply_the_deployment"><a class="anchor" href="#_apply_the_deployment"></a><strong>Apply the Deployment:</strong></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f granite3-isvc.yaml</code></pre>
 </div>
 </div>
-</li>
-<li>
-<p><strong>Wait for Readiness:</strong></p>
+</div>
+<div class="sect2">
+<h3 id="_wait_for_readiness"><a class="anchor" href="#_wait_for_readiness"></a><strong>Wait for Readiness:</strong></h3>
 <div class="paragraph">
 <p>This process can take 2-5 minutes as the vLLM engine initializes and loads the weights into GPU memory.</p>
 </div>
@@ -331,8 +322,6 @@ spec:
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc wait --for=condition=Ready inferenceservice/granite3 -n model-deploy-lab --timeout=300s</code></pre>
 </div>
 </div>
-</li>
-</ol>
 </div>
 </div>
 </div>
@@ -342,35 +331,26 @@ spec:
 <div class="paragraph">
 <p>Once the model is ready, we can test it using the OpenAI-compatible API provided by vLLM.</p>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>Retrieve the Inference URL:</strong></p>
+<div class="sect2">
+<h3 id="_retrieve_the_inference_url"><a class="anchor" href="#_retrieve_the_inference_url"></a><strong>Retrieve the Inference URL:</strong></h3>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export MODEL_URL=$(oc get inferenceservice granite3 -n model-deploy-lab -o jsonpath='{.status.url}')
 echo "Targeting: $MODEL_URL"</code></pre>
 </div>
 </div>
-</li>
-</ol>
-</div>
-</div>
-</div>
-<h1 id="_add_the_port_explicitly" class="sect0"><a class="anchor" href="#_add_the_port_explicitly"></a>Add the port explicitly</h1>
-<div class="paragraph">
-<p>curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "granite3",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'</p>
+    "messages": [{"role": "user", "content": "Write a Poem about AI"}]
+  }'</code></pre>
 </div>
-<div class="listingblock">
-<div class="content">
-<pre>*Expected Output:*
-[source,json]</pre>
 </div>
+<div class="paragraph">
+<p><strong>Expected Output:</strong></p>
 </div>
 <div class="paragraph">
 <p>{
@@ -390,9 +370,7 @@ echo "Targeting: $MODEL_URL"</code></pre>
   ]
 }</p>
 </div>
-<div class="listingblock">
-<div class="content">
-<pre></pre>
+</div>
 </div>
 </div>
 <nav class="pagination">
