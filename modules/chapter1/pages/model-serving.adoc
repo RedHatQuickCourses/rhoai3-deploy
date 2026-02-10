@@ -80,6 +80,50 @@ oc apply -f - -n model-deploy-lab
 [source,bash]
 ----
 oc get servingruntime vllm-cuda-runtime -n model-deploy-lab
+
+----
+
+[source,bash]
+.data-connection.yaml
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: models-connection  # Renaming for clarity (was 'models' or 'storage-config')
+  namespace: model-deploy-lab
+  labels:
+    # 1. VISIBILITY: Tells the Dashboard "I belong to RHOAI"
+    opendatahub.io/dashboard: "true"
+    # 2. MANAGEMENT: Tells RHOAI "I am a managed Data Connection"
+    opendatahub.io/managed: "true"
+  annotations:
+    # 3. TYPE: Tells the Injector "I am an S3 credential"
+    opendatahub.io/connection-type: s3
+    openshift.io/display-name: Models Bucket
+type: Opaque
+stringData:
+  # The keys MUST match standard AWS SDK expectations
+  AWS_ACCESS_KEY_ID: minio
+  AWS_SECRET_ACCESS_KEY: minio123
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_S3_ENDPOINT: http://minio-service.model-deploy-lab:9000
+  AWS_S3_BUCKET: models
+
+----
+
+[source,bash]
+.link the accounts.yaml
+----
+# 1. Apply the corrected secret
+oc apply -f data-connection.yaml
+
+# 2. Link it to the Service Account your ISVC is using
+# (Assuming your ISVC uses 'fast-track-sa' based on previous steps)
+oc secret link fast-track-sa models-connection
+
+# 3. Trigger a restart of the pod
+oc delete pod -l serving.kserve.io/inferenceservice=granite3
+
 ----
 
 == Step 3: The Deployment (The Workload)
@@ -102,6 +146,7 @@ metadata:
     serving.kserve.io/deploymentMode: RawDeployment
 spec:
   predictor:
+    serviceAccountName: fast-track-sa
     model:
       # The Format must match what the Runtime supports (vLLM)
       modelFormat:
@@ -147,22 +192,12 @@ export MODEL_URL=$(oc get inferenceservice granite3 -n model-deploy-lab -o jsonp
 echo "Targeting: $MODEL_URL"
 ----
 
-. **Send a Chat Completion Request:**
-+
-[source,bash]
-----
-curl -k -X POST "$MODEL_URL/v1/chat/completions" \
+# Add the port explicitly
+curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "granite3",
-    "messages": [
-      {
-        "role": "user",
-        "content": "Write a haiku about deploying AI on Kubernetes."
-      }
-    ],
-    "temperature": 0.7,
-    "max_tokens": 50
+    "messages": [{"role": "user", "content": "Hello!"}]
   }'
 ----
 
@@ -186,5 +221,3 @@ curl -k -X POST "$MODEL_URL/v1/chat/completions" \
   ]
 }
 ----
-
-xref:course-summary.adoc[Next: Course Summary]

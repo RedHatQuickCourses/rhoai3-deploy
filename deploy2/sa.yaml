@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: granite-sa
-  namespace: model-deploy-lab
-secrets:
-  - name: models
