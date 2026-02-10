@@ -165,16 +165,6 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <div class="paragraph">
 <p>In this lab, we will deploy our inference stack using <strong>Infrastructure-as-Code</strong>.</p>
 </div>
-<div id="toc" class="toc">
-<div id="toctitle" class="title">Table of Contents</div>
-<ul class="sectlevel1">
-<li><a href="#_step_1_prerequisites">Step 1: Prerequisites</a></li>
-<li><a href="#_step_2_the_runtime_the_engine">Step 2: The Runtime (The Engine)</a></li>
-<li><a href="#_step_3_the_deployment_the_workload">Step 3: The Deployment (The Workload)</a></li>
-<li><a href="#_step_4_validate_the_api">Step 4: Validate the API</a></li>
-<li><a href="#_add_the_port_explicitly">Add the port explicitly</a></li>
-</ul>
-</div>
 </div>
 </div>
 <div class="sect1">
@@ -190,11 +180,10 @@ Before proceeding, you must ensure the model is downloaded and the storage is co
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Verify the model files exist in the 'models' bucket
-oc exec -n model-deploy-lab deployment/minio -- ls /data/models/granite3</code></pre>
+oc exec -n model-deploy-lab deployment/minio -- ls /data/models/granite3
++
+*Expected Output:* You should see files like `config.json`, `tokenizer.json`, and `*.safetensors`.</code></pre>
 </div>
-</div>
-<div class="paragraph">
-<p><strong>Expected Output:</strong> You should see files like <code>config.json</code>, <code>tokenizer.json</code>, and <code>*.safetensors</code>.</p>
 </div>
 </li>
 <li>
