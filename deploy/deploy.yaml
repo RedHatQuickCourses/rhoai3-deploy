@@ -1,53 +1,74 @@
+# -------------------------------------------------------------------
+# 1. The Model (InferenceService)
+# -------------------------------------------------------------------
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
   name: granite3
   namespace: model-deploy-lab
   annotations:
-    # 1. Operational Mode
     serving.kserve.io/deploymentMode: RawDeployment
-    security.opendatahub.io/enable-auth: 'false' # Keep false for lab simplicity
-    
-    # 2. Display & Metrics
+    security.opendatahub.io/enable-auth: 'false'
     openshift.io/display-name: Granite 3.3 2B Instruct
-    prometheus.io/path: /metrics
-    prometheus.io/port: '8080'
+    
+    # Metrics & Hardware Profile
+    serving.kserve.io/enable-prometheus-scraping: 'false'
+    serving.kserve.io/enable-metric-aggregation: 'false'
+    opendatahub.io/hardware-profile-name: gpu-profile
+    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
     
   labels:
-    # 3. Discovery (Dashboard & Gen AI Studio)
     opendatahub.io/dashboard: 'true'
     opendatahub.io/genai-asset: 'true'
-    app: granite3
-    component: predictor
+    networking.kserve.io/visibility: exposed
+    app: granite3-predictor
 spec:
   predictor:
-    # 4. Identity (Links to your 'storage-config' secret)
+    # CORRECTED: Uses your lab's specific Service Account
     serviceAccountName: fast-track-sa
     model:
       modelFormat:
         name: vLLM
       runtime: vllm-cuda-runtime
-      
-      # 5. Storage (Back to S3 as requested)
       storageUri: s3://models/granite3
-      
-      # 6. Resources (Tuned for Granite 3 2B)
       resources:
         requests:
-          nvidia.com/gpu: "1"
-          memory: "8Gi"
-          cpu: "1"
+          cpu: '1'
+          memory: 12Gi
+          nvidia.com/gpu: '1'
         limits:
-          nvidia.com/gpu: "1"
-          memory: "10Gi"
-          cpu: "4"
-
-      # 7. Engine Arguments (Granite-Specific)
+          cpu: '1'
+          memory: 12Gi
+          nvidia.com/gpu: '1'
       args:
         - "--port=8080"
         - "--model=/mnt/models"
         - "--served-model-name=granite3"
         - "--dtype=half"
-        - "--max-model-len=4096"        # 4k context is safe for 2B model
+        - "--max-model-len=4096"
         - "--gpu-memory-utilization=0.95"
-        # Chat template is auto-detected for Granite, usually no need to override
+
+---
+# -------------------------------------------------------------------
+# 2. The External Route
+# -------------------------------------------------------------------
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: granite3
+  namespace: model-deploy-lab
+  annotations:
+    haproxy.router.openshift.io/timeout: 30s
+  labels:
+    inferenceservice-name: granite3
+spec:
+  to:
+    kind: Service
+    name: granite3-predictor
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
