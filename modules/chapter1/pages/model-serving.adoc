@@ -18,8 +18,9 @@ To begin, we need to acquire the automation scripts. We have packaged the entire
 ----
 git clone https://github.com/RedHatQuickCourses/rhoai3-deploy.git
 ----
-. **Switch to the lab directory:**
-+
+
+**Switch to the lab directory:**
+
 [source,bash]
 ----
 cd rhoai3-deploy
@@ -44,18 +45,19 @@ In this lab, we will deploy our inference stack using **Infrastructure-as-Code**
 
 Before proceeding, verify that your "Fast Track" script successfully populated the vault.
 
-. **Check the S3 Bucket:**
-+
+=== **Check the S3 Bucket:**
+
 [source,bash]
 ----
 # Verify the model files exist in the 'models' bucket
 oc exec -n model-deploy-lab deployment/minio -- ls /data/models/granite3
-+
-*Expected Output:* You should see files like `config.json`, `tokenizer.json`, and `*.safetensors`.
 ----
 
-. **Check the Data Connection:**
-+
+*Expected Output:* You should see files like `config.json`, `tokenizer.json`, and `*.safetensors`.
+
+
+=== **Check the Data Connection:**
+
 [source,bash]
 ----
 # Verify the KServe storage secret exists
@@ -66,20 +68,19 @@ oc get secret storage-config -n model-deploy-lab
 
 RHOAI includes a certified vLLM runtime template. Instead of writing one from scratch, we will extract the official template from the cluster and install it in our namespace.
 
-. **Extract and Apply the Runtime:**
-+
+=== **Extract and Apply the Runtime:**
+
 [source,bash]
 ----
 oc process vllm-cuda-runtime-template -n redhat-ods-applications | \
 oc apply -f - -n model-deploy-lab
 ----
 
-. **Verify the Runtime:**
-+
+=== **Verify the Runtime:**
+
 [source,bash]
 ----
 oc get servingruntime vllm-cuda-runtime -n model-deploy-lab
-
 ----
 
 [source,bash]
@@ -129,10 +130,9 @@ oc delete pod -l serving.kserve.io/inferenceservice=granite3
 
 We will now create the `InferenceService`. This Custom Resource binds our **Runtime** (the engine) to our **Storage** (the fuel).
 
-. **Create the Manifest:**
-+
+=== **Create the Manifest:**
 Copy the following YAML to a file named `granite3-isvc.yaml`.
-+
+
 [source,yaml]
 ----
 apiVersion: serving.kserve.io/v1beta1
@@ -163,17 +163,17 @@ spec:
           memory: "10Gi"
 ----
 
-. **Apply the Deployment:**
-+
+=== **Apply the Deployment:**
+
 [source,bash]
 ----
 oc apply -f granite3-isvc.yaml
 ----
 
-. **Wait for Readiness:**
-+
+=== **Wait for Readiness:**
+
 This process can take 2-5 minutes as the vLLM engine initializes and loads the weights into GPU memory.
-+
+
 [source,bash]
 ----
 oc wait --for=condition=Ready inferenceservice/granite3 -n model-deploy-lab --timeout=300s
@@ -183,26 +183,27 @@ oc wait --for=condition=Ready inferenceservice/granite3 -n model-deploy-lab --ti
 
 Once the model is ready, we can test it using the OpenAI-compatible API provided by vLLM.
 
-. **Retrieve the Inference URL:**
-+
+=== **Retrieve the Inference URL:**
+
 [source,bash]
 ----
 export MODEL_URL=$(oc get inferenceservice granite3 -n model-deploy-lab -o jsonpath='{.status.url}')
 echo "Targeting: $MODEL_URL"
 ----
 
-# Add the port explicitly
+// # Add the port explicitly
+[source,bash]
+----
 curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "granite3",
-    "messages": [{"role": "user", "content": "Hello!"}]
+    "messages": [{"role": "user", "content": "Write a Poem about AI"}]
   }'
 ----
 
 *Expected Output:*
-[source,json]
-----
+
 {
   "id": "cmpl-...",
   "object": "chat.completion",
@@ -219,4 +220,3 @@ curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
     }
   ]
 }
-----
