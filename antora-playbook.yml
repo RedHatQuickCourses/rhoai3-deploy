@@ -1,5 +1,5 @@
 site:
-  title: Red Hat OpenShift AI (RHOAI) Enterprise Model Serving
+  title: Shadow-Proof AI: The Economics of Governed Serving
   start_page: rhoai3-deploy::index.adoc
 
 content:
