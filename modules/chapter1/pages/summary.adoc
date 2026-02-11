@@ -7,7 +7,7 @@
 :description: Recap of the Enterprise Serving workflow and next steps for production.
 
 [.lead]
-*You have achieved model inference."*
+*You have achieved model inference.*
 
 At the start of this course, we identified the core problem:
 *Downloading models to a laptop is easy. Serving them at scale, on budget, and without crashing production is hard.*
