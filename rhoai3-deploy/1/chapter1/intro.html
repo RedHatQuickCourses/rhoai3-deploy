@@ -117,27 +117,11 @@ A platform engineer looks at that same model and sees a massive infrastructure b
 <div class="paragraph">
 <p>We are moving beyond "Shadow AI", where users blindly deploy heavy models—to a governed "industrailized approach to AI" where inference is fast, efficient, and cost-effective by design.</p>
 </div>
+<div class="imageblock text-center">
+<div class="content">
+<img src="_images/shadowproofai.png" alt="shadowproofai">
 </div>
-</div>
-<div class="sect1">
-<h2 id="_the_core_challenge_will_it_fit"><a class="anchor" href="#_the_core_challenge_will_it_fit"></a>The Core Challenge: "Will It Fit?"</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Deploying an LLM is not like deploying a microservice. You cannot just throw it into a container and hope for the best.
-You must answer three critical questions before you ever run a <code>oc apply</code>:</p>
-</div>
-<div class="olist arabic">
-<ol class="arabic">
-<li>
-<p><strong>The Selection:</strong> Is this model the right size for the task, or are we burning GPU cycles on overkill?</p>
-</li>
-<li>
-<p><strong>The Hardware:</strong> Do we have enough Video RAM (VRAM) to handle the model weights <strong>plus</strong> the concurrent user traffic (KV Cache)?</p>
-</li>
-<li>
-<p><strong>The Engine:</strong> Is our runtime (vLLM) tuned to maximize throughput, or are we leaving performance on the table?</p>
-</li>
-</ol>
+<div class="title">Figure 1. Economics of Governed Serving with Red Hat AI and vLLM</div>
 </div>
 </div>
 </div>
