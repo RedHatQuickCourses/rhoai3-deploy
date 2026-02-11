@@ -13,6 +13,7 @@ A common mistake is looking at a model's file size (e.g., "15GB") and assuming i
 It won't.
 To size an inference node correctly, you must account for the **model weights** (static) and the **KV cache** (dynamic).
 
+
 == The Formula
 
 
