@@ -1,4 +1,4 @@
-= Shadow-Proof AI: The Economics of Governed Serving
+= Shadow-Proof AI, The Economics of Governed Serving
 :navtitle: Strategy & Selection
 :toc: macro
 
