@@ -113,7 +113,7 @@
 <p>In the previous modules, we selected the <strong>Granite-8B (FP16)</strong> model and calculated the tuning parameters (<code>max-model-len=8000</code>) required to make it run safely on our hardware.</p>
 </div>
 <div class="paragraph">
-<p>Now, we&#8217;re using the <strong>granite-3.3-2b-instruct</strong>, it&#8217;s .75% smaller and faster experience.</p>
+<p>Now, we&#8217;re using the <strong>granite-3.3-2b-instruct</strong>, it&#8217;s .75% smaller and faster experience.  So let&#8217;s increase the max-model-len=16000, providing more KV cache to support larger prompts.</p>
 </div>
 <div class="paragraph">
 <p>You <strong>could</strong> open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn&#8217;t make a typo.</p>
@@ -351,7 +351,7 @@ stringData:
 <div class="sect2">
 <h3 id="_create_the_manifest"><a class="anchor" href="#_create_the_manifest"></a><strong>Create the Manifest:</strong></h3>
 <div class="paragraph">
-<p>Copy the following YAML to a file named <code>granite3-isvc.yaml</code>.</p>
+<p>There is supplied file in the deploy folder called deploy.yaml.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -375,7 +375,7 @@ spec:
       # The path to your model in MinIO (s3://bucket/folder)
       storageUri: s3://models/granite3
       args:
-        - "--max-model-len=4096"        # Limits context to 4k to save VRAM
+        - "--max-model-len=16000"        # Limits context to 16k to save VRAM
         - "--gpu-memory-utilization=0.95" # Uses 95% of GPU (leaves 5% for overhead)
        # - "--distributed-executor-backend=mp" # Required for some multi-GPU setups
       resources:
