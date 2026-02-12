@@ -11,7 +11,7 @@
 
 In the previous modules, we selected the *Granite-8B (FP16)* model and calculated the tuning parameters (`max-model-len=8000`) required to make it run safely on our hardware.
 
-Now, we're using the **granite-3.3-2b-instruct**, it's .75% smaller and faster experience. 
+Now, we're using the **granite-3.3-2b-instruct**, it's .75% smaller and faster experience.  So let's increase the max-model-len=16000, providing more KV cache to support larger prompts. 
 
 
 You *could* open the OpenShift AI Dashboard, click "Add Model Server," copy-paste arguments, and hope you didn't make a typo.
@@ -178,7 +178,7 @@ oc secret link fast-track-sa models-connection
 We will now create the `InferenceService`. This Custom Resource binds our **Runtime** (the engine) to our **Storage** (the fuel).
 
 === **Create the Manifest:**
-Copy the following YAML to a file named `granite3-isvc.yaml`.
+There is supplied file in the deploy folder called deploy.yaml.
 
 [source,yaml]
 ----
@@ -202,7 +202,7 @@ spec:
       # The path to your model in MinIO (s3://bucket/folder)
       storageUri: s3://models/granite3
       args:
-        - "--max-model-len=4096"        # Limits context to 4k to save VRAM
+        - "--max-model-len=16000"        # Limits context to 16k to save VRAM
         - "--gpu-memory-utilization=0.95" # Uses 95% of GPU (leaves 5% for overhead)
        # - "--distributed-executor-backend=mp" # Required for some multi-GPU setups
       resources:
