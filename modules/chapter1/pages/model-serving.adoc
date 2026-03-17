@@ -245,7 +245,7 @@ echo "Targeting: $MODEL_URL"
 // # Add the port explicitly
 [source,bash]
 ----
-curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
+curl -k -X POST "${MODEL_URL}/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "granite3",
@@ -290,4 +290,3 @@ Based on your feedback, we'll update this course accordingly:
 
 
 Let us know by https://github.com/RedHatQuickCourses/rhoai3-deploy/issues[creating an issue in the course repository, window=blank] 
-
