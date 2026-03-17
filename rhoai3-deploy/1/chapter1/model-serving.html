@@ -425,7 +425,7 @@ echo "Targeting: $MODEL_URL"</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -k -X POST "${MODEL_URL}:8080/v1/chat/completions" \
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -k -X POST "${MODEL_URL}/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "granite3",
